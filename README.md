@@ -14,6 +14,8 @@ See docs/PLAN.md for the full plan and docs/API.md for the API reference. See do
 
 ## Quick start
 
+Start the API:
+
 ```
 cd server
 cp .env.example .env
@@ -22,4 +24,17 @@ npm run seed
 npm start
 ```
 
-Then open dashboard/index.html in a browser, or serve the dashboard folder with any static file server. The default seeded admin login is in docs/API.md.
+This starts the API on http://localhost:4000 and creates a seeded admin login plus one demo vehicle. The seeded login is in docs/API.md, change the password before any real deployment.
+
+Serve the dashboard in a second terminal:
+
+```
+cd dashboard
+python3 -m http.server 8080
+```
+
+Then open http://localhost:8080/login.html in a browser. The dashboard's API base URL is set in dashboard/js/api.js, update it if the API is not running on localhost:4000.
+
+## Status
+
+Backend API and web dashboard are functional and covered by manual end to end testing (login, vehicle and contact management, crash event lifecycle, sim heartbeat and low balance detection, alerts feed). The Android app and Arduino firmware are unchanged in this phase, see docs/INTEGRATION.md for how to connect them later.
