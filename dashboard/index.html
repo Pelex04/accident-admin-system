@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Overview - Accident Detection Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <h1 class="page-title">Overview</h1>
+
+    <div class="card">
+      <h2>Alerts</h2>
+      <div id="alertsContainer" class="muted">Loading alerts...</div>
+    </div>
+
+    <div class="card">
+      <h2>Vehicles</h2>
+      <div id="vehicleCountContainer" class="muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h2>Recent crash events</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Detected</th>
+            <th>Status</th>
+            <th>Location</th>
+          </tr>
+        </thead>
+        <tbody id="eventsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
