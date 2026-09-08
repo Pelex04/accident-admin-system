@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Crash events - Accident Detection Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <h1 class="page-title">Crash events</h1>
+
+    <div class="card">
+      <div class="form-row" style="max-width: 260px">
+        <label for="statusFilter">Filter by status</label>
+        <select id="statusFilter">
+          <option value="">All</option>
+          <option value="detected">Detected</option>
+          <option value="countdown">Countdown</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="alert_sent">Alert sent</option>
+          <option value="alert_failed">Alert failed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Detected</th>
+            <th>Status</th>
+            <th>Location</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="eventsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/events.js"></script>
+</body>
+</html>
