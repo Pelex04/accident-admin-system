@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIM status - Accident Detection Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <h1 class="page-title">SIM status</h1>
+    <p class="muted">
+      Each vehicle's Arduino unit checks in with the raw balance text from its Airtel USSD
+      query. If the text contains a low balance keyword, it is flagged here automatically.
+    </p>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Last check in</th>
+            <th>Balance text</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="simTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/sim.js"></script>
+</body>
+</html>
