@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vehicles - Accident Detection Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <h1 class="page-title">Vehicles</h1>
+
+    <div class="card">
+      <h2>Add a vehicle</h2>
+      <div class="form-row">
+        <label for="newName">Name</label>
+        <input type="text" id="newName" placeholder="Driver name or plate number">
+      </div>
+      <div class="form-row">
+        <label for="newSim">Arduino SIM number</label>
+        <input type="text" id="newSim" placeholder="+265991234567">
+      </div>
+      <div class="error-text" id="addError"></div>
+      <button class="btn" id="addVehicleButton">Add vehicle</button>
+    </div>
+
+    <div class="card">
+      <h2>All vehicles</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>SIM number</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Contacts</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="vehiclesTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="contactsCard" style="display: none">
+      <h2 id="contactsTitle">Contacts</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone number</th>
+            <th>Priority</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contactsTableBody"></tbody>
+      </table>
+      <div class="form-row" style="margin-top: 14px">
+        <label for="contactName">New contact name</label>
+        <input type="text" id="contactName" placeholder="Name">
+      </div>
+      <div class="form-row">
+        <label for="contactPhone">New contact phone number</label>
+        <input type="text" id="contactPhone" placeholder="+265888111222">
+      </div>
+      <div class="error-text" id="contactError"></div>
+      <button class="btn" id="addContactButton">Add contact</button>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/vehicles.js"></script>
+</body>
+</html>
