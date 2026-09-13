@@ -19,7 +19,7 @@ function renderSidebar(activePage) {
   sidebar.className = "sidebar";
   sidebar.innerHTML =
     "<div class=\"sidebar-brand\">" +
-    "<div class=\"name\"><span class=\"mark\"></span>Accident Detection</div>" +
+    "<div class=\"name\"><span class=\"accent\">Accident</span> Detection</div>" +
     "<div class=\"sub\">Admin</div>" +
     "</div>" +
     "<nav>" + linksHtml + "</nav>" +
