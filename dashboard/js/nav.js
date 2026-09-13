@@ -18,14 +18,18 @@ function renderSidebar(activePage) {
   const sidebar = document.createElement("div");
   sidebar.className = "sidebar";
   sidebar.innerHTML =
-    "<h1>Accident Detection Admin</h1>" +
+    "<div class=\"sidebar-brand\">" +
+    "<div class=\"name\"><span class=\"mark\"></span>Accident Detection</div>" +
+    "<div class=\"sub\">Admin</div>" +
+    "</div>" +
     "<nav>" + linksHtml + "</nav>" +
-    "<div class=\"logout\">" +
-    "<div class=\"muted\" style=\"padding: 0 20px 8px 20px\">" + email + "</div>" +
+    "<div class=\"sidebar-footer\">" +
+    "<div class=\"who\">" + email + "</div>" +
     "<a href=\"#\" id=\"logoutLink\">Log out</a>" +
     "</div>";
 
-  document.body.insertBefore(sidebar, document.body.firstChild);
+  const layout = document.querySelector(".layout");
+  layout.insertBefore(sidebar, layout.firstChild);
 
   document.getElementById("logoutLink").addEventListener("click", (event) => {
     event.preventDefault();

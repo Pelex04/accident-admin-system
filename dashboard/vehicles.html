@@ -3,67 +3,87 @@
 <head>
 <meta charset="UTF-8">
 <title>Vehicles - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="layout">
   <div class="main">
-    <h1 class="page-title">Vehicles</h1>
-
-    <div class="card">
-      <h2>Add a vehicle</h2>
-      <div class="form-row">
-        <label for="newName">Name</label>
-        <input type="text" id="newName" placeholder="Driver name or plate number">
+    <div class="page-header">
+      <div>
+        <h1>Vehicles</h1>
+        <p>Every registered device and its emergency contacts.</p>
       </div>
-      <div class="form-row">
-        <label for="newSim">Arduino SIM number</label>
-        <input type="text" id="newSim" placeholder="+265991234567">
-      </div>
-      <div class="error-text" id="addError"></div>
-      <button class="btn" id="addVehicleButton">Add vehicle</button>
     </div>
 
-    <div class="card">
-      <h2>All vehicles</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>SIM number</th>
-            <th>Status</th>
-            <th>Registered</th>
-            <th>Contacts</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="vehiclesTableBody"></tbody>
-      </table>
-    </div>
+    <div class="page-body">
+      <div class="section">
+        <div class="section-title">
+          <h2>Registered vehicles</h2>
+          <span class="count" id="vehicleCount"></span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Vehicle</th>
+              <th>SIM number</th>
+              <th>Status</th>
+              <th>Registered</th>
+              <th>Contacts</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="vehiclesTableBody"></tbody>
+        </table>
+      </div>
 
-    <div class="card" id="contactsCard" style="display: none">
-      <h2 id="contactsTitle">Contacts</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Phone number</th>
-            <th>Priority</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="contactsTableBody"></tbody>
-      </table>
-      <div class="form-row" style="margin-top: 14px">
-        <label for="contactName">New contact name</label>
-        <input type="text" id="contactName" placeholder="Name">
+      <div class="section" style="max-width: 420px">
+        <div class="section-title">
+          <h2>Add a vehicle</h2>
+        </div>
+        <div class="card">
+          <div class="form-row">
+            <label for="newName">Name</label>
+            <input type="text" id="newName" placeholder="Driver name or plate number">
+          </div>
+          <div class="form-row">
+            <label for="newSim">Arduino SIM number</label>
+            <input type="text" id="newSim" placeholder="+265991234567">
+          </div>
+          <div class="error-text" id="addError"></div>
+          <button class="btn" id="addVehicleButton">Add vehicle</button>
+        </div>
       </div>
-      <div class="form-row">
-        <label for="contactPhone">New contact phone number</label>
-        <input type="text" id="contactPhone" placeholder="+265888111222">
+
+      <div class="section" id="contactsSection" style="display: none; max-width: 560px">
+        <div class="section-title">
+          <h2 id="contactsTitle">Contacts</h2>
+        </div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone number</th>
+                <th>Priority</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="contactsTableBody"></tbody>
+          </table>
+          <div class="form-row" style="margin-top: 16px">
+            <label for="contactName">New contact name</label>
+            <input type="text" id="contactName" placeholder="Name">
+          </div>
+          <div class="form-row">
+            <label for="contactPhone">New contact phone number</label>
+            <input type="text" id="contactPhone" placeholder="+265888111222">
+          </div>
+          <div class="error-text" id="contactError"></div>
+          <button class="btn" id="addContactButton">Add contact</button>
+        </div>
       </div>
-      <div class="error-text" id="contactError"></div>
-      <button class="btn" id="addContactButton">Add contact</button>
     </div>
   </div>
 </div>

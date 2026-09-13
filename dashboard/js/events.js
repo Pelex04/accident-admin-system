@@ -3,13 +3,13 @@ renderSidebar("events");
 
 function mapLink(latitude, longitude) {
   if (latitude === null || longitude === null || latitude === undefined || longitude === undefined) {
-    return "Not available";
+    return "\u2014";
   }
   const url = "https://maps.google.com/?q=" + latitude + "," + longitude;
-  return "<a href=\"" + url + "\" target=\"_blank\" style=\"color: #2f81f7\">" + latitude + ", " + longitude + "</a>";
+  return "<a href=\"" + url + "\" target=\"_blank\">" + latitude + ", " + longitude + "</a>";
 }
 
-function badgeForStatus(status) {
+function dotForStatus(status) {
   if (status === "alert_failed") return "danger";
   if (status === "detected" || status === "countdown") return "warn";
   return "ok";
@@ -26,7 +26,7 @@ async function loadEvents() {
     ]);
 
     if (events.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">No crash events recorded.</td></tr>";
+      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">No crash events match this filter.</td></tr>";
       return;
     }
 
@@ -37,11 +37,11 @@ async function loadEvents() {
 
         return (
           "<tr>" +
-          "<td>" + vehicleName + "</td>" +
-          "<td>" + new Date(event.detectedAt).toLocaleString() + "</td>" +
-          "<td><span class=\"badge " + badgeForStatus(event.status) + "\">" + event.status.replace(/_/g, " ") + "</span></td>" +
-          "<td>" + mapLink(event.latitude, event.longitude) + "</td>" +
-          "<td>" + (event.notes || "") + "</td>" +
+          "<td><span class=\"dot " + dotForStatus(event.status) + "\"></span>" + vehicleName + "</td>" +
+          "<td class=\"mono\">" + new Date(event.detectedAt).toLocaleString() + "</td>" +
+          "<td>" + event.status.replace(/_/g, " ") + "</td>" +
+          "<td class=\"mono\">" + mapLink(event.latitude, event.longitude) + "</td>" +
+          "<td class=\"muted\">" + (event.notes || "\u2014") + "</td>" +
           "<td>" +
           "<select data-event-id=\"" + event.id + "\">" +
           ["detected", "countdown", "cancelled", "alert_sent", "alert_failed"]
@@ -66,7 +66,7 @@ async function loadEvents() {
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Could not load events: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">Could not load events: " + err.message + "</td></tr>";
   }
 }
 

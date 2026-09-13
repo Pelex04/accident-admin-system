@@ -3,30 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <title>SIM status - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="layout">
   <div class="main">
-    <h1 class="page-title">SIM status</h1>
-    <p class="muted">
-      Each vehicle's Arduino unit checks in with the raw balance text from its Airtel USSD
-      query. If the text contains a low balance keyword, it is flagged here automatically.
-    </p>
+    <div class="page-header">
+      <div>
+        <h1>SIM status</h1>
+        <p>Airtel balance and last check in, per vehicle.</p>
+      </div>
+    </div>
 
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Vehicle</th>
-            <th>Last check in</th>
-            <th>Balance text</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="simTableBody"></tbody>
-      </table>
+    <div class="page-body">
+      <div class="section">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Vehicle</th>
+              <th>Last check in</th>
+              <th>Balance text</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="simTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>

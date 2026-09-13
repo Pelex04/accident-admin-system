@@ -3,18 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <title>Crash events - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="layout">
   <div class="main">
-    <h1 class="page-title">Crash events</h1>
-
-    <div class="card">
-      <div class="form-row" style="max-width: 260px">
-        <label for="statusFilter">Filter by status</label>
-        <select id="statusFilter">
-          <option value="">All</option>
+    <div class="page-header">
+      <div>
+        <h1>Crash events</h1>
+        <p>Every detection reported by the field devices.</p>
+      </div>
+      <div>
+        <select id="statusFilter" style="width: 200px">
+          <option value="">All statuses</option>
           <option value="detected">Detected</option>
           <option value="countdown">Countdown</option>
           <option value="cancelled">Cancelled</option>
@@ -24,20 +27,22 @@
       </div>
     </div>
 
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Vehicle</th>
-            <th>Detected</th>
-            <th>Status</th>
-            <th>Location</th>
-            <th>Notes</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="eventsTableBody"></tbody>
-      </table>
+    <div class="page-body">
+      <div class="section">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Vehicle</th>
+              <th>Detected</th>
+              <th>Status</th>
+              <th>Location</th>
+              <th>Notes</th>
+              <th>Update</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>

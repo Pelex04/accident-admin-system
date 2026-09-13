@@ -17,7 +17,7 @@ async function loadSimStatuses() {
     const [statuses, vehicles] = await Promise.all([api.getSimStatuses(), api.getVehicles()]);
 
     if (vehicles.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No vehicles registered yet.</td></tr>";
+      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"5\">No vehicles registered yet.</td></tr>";
       return;
     }
 
@@ -28,21 +28,24 @@ async function loadSimStatuses() {
         if (!status) {
           return (
             "<tr>" +
-            "<td>" + vehicle.name + "</td>" +
+            "<td><span class=\"dot neutral\"></span>" + vehicle.name + "</td>" +
             "<td class=\"muted\">Never checked in</td>" +
             "<td class=\"muted\">No data</td>" +
-            "<td><span class=\"badge warn\">unknown</span></td>" +
+            "<td><span class=\"badge neutral\">unknown</span></td>" +
             "<td></td>" +
             "</tr>"
           );
         }
 
         const stale = minutesSince(status.lastHeartbeatAt) > STALE_THRESHOLD_MINUTES;
+        let dot = "ok";
         let badge = "<span class=\"badge ok\">ok</span>";
 
         if (status.lowBalanceFlag) {
+          dot = "danger";
           badge = "<span class=\"badge danger\">low balance</span>";
         } else if (stale) {
+          dot = "warn";
           badge = "<span class=\"badge warn\">no recent check in</span>";
         }
 
@@ -52,9 +55,9 @@ async function loadSimStatuses() {
 
         return (
           "<tr>" +
-          "<td>" + vehicle.name + "</td>" +
-          "<td>" + new Date(status.lastHeartbeatAt).toLocaleString() + "</td>" +
-          "<td>" + (status.lastKnownBalanceText || "") + "</td>" +
+          "<td><span class=\"dot " + dot + "\"></span>" + vehicle.name + "</td>" +
+          "<td class=\"mono\">" + new Date(status.lastHeartbeatAt).toLocaleString() + "</td>" +
+          "<td class=\"mono\">" + (status.lastKnownBalanceText || "\u2014") + "</td>" +
           "<td>" + badge + "</td>" +
           "<td>" + action + "</td>" +
           "</tr>"
@@ -69,7 +72,7 @@ async function loadSimStatuses() {
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Could not load sim status: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"5\">Could not load sim status: " + err.message + "</td></tr>";
   }
 }
 

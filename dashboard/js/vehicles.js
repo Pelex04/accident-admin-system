@@ -5,31 +5,33 @@ let selectedVehicleId = null;
 
 async function loadVehicles() {
   const tableBody = document.getElementById("vehiclesTableBody");
+  const vehicleCount = document.getElementById("vehicleCount");
 
   try {
     const vehicles = await api.getVehicles();
+    vehicleCount.textContent = vehicles.length + (vehicles.length === 1 ? " vehicle" : " vehicles");
 
     if (vehicles.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">No vehicles yet.</td></tr>";
+      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">No vehicles yet. Add one below.</td></tr>";
       return;
     }
 
     const rows = await Promise.all(
       vehicles.map(async (vehicle) => {
         const contacts = await api.getVehicleContacts(vehicle.id);
-        const statusBadge = vehicle.status === "active" ? "ok" : "warn";
+        const isActive = vehicle.status === "active";
 
         return (
           "<tr>" +
-          "<td>" + vehicle.name + "</td>" +
-          "<td>" + vehicle.arduinoSimNumber + "</td>" +
-          "<td><span class=\"badge " + statusBadge + "\">" + vehicle.status + "</span></td>" +
-          "<td>" + new Date(vehicle.registeredAt).toLocaleDateString() + "</td>" +
+          "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + vehicle.name + "</td>" +
+          "<td class=\"mono\">" + vehicle.arduinoSimNumber + "</td>" +
+          "<td><span class=\"badge " + (isActive ? "ok" : "neutral") + "\">" + vehicle.status + "</span></td>" +
+          "<td class=\"mono\">" + new Date(vehicle.registeredAt).toLocaleDateString() + "</td>" +
           "<td>" + contacts.length + "</td>" +
           "<td class=\"actions-cell\">" +
           "<button class=\"btn secondary\" data-action=\"contacts\" data-id=\"" + vehicle.id + "\" data-name=\"" + vehicle.name + "\">Contacts</button>" +
           "<button class=\"btn secondary\" data-action=\"toggle\" data-id=\"" + vehicle.id + "\" data-status=\"" + vehicle.status + "\">" +
-          (vehicle.status === "active" ? "Deactivate" : "Activate") +
+          (isActive ? "Deactivate" : "Activate") +
           "</button>" +
           "<button class=\"btn danger\" data-action=\"delete\" data-id=\"" + vehicle.id + "\">Delete</button>" +
           "</td>" +
@@ -41,7 +43,7 @@ async function loadVehicles() {
     tableBody.innerHTML = rows.join("");
     attachRowHandlers();
   } catch (err) {
-    tableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Could not load vehicles: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">Could not load vehicles: " + err.message + "</td></tr>";
   }
 }
 
@@ -64,6 +66,10 @@ function attachRowHandlers() {
         return;
       }
       await api.deleteVehicle(button.dataset.id);
+      if (selectedVehicleId === button.dataset.id) {
+        document.getElementById("contactsSection").style.display = "none";
+        selectedVehicleId = null;
+      }
       loadVehicles();
     });
   });
@@ -71,9 +77,10 @@ function attachRowHandlers() {
 
 async function showContacts(vehicleId, vehicleName) {
   selectedVehicleId = vehicleId;
-  document.getElementById("contactsCard").style.display = "block";
+  document.getElementById("contactsSection").style.display = "block";
   document.getElementById("contactsTitle").textContent = "Contacts for " + vehicleName;
   await loadContacts();
+  document.getElementById("contactsSection").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function loadContacts() {
@@ -87,7 +94,7 @@ async function loadContacts() {
     const contacts = await api.getVehicleContacts(selectedVehicleId);
 
     if (contacts.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">No contacts yet.</td></tr>";
+      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">No contacts yet.</td></tr>";
       return;
     }
 
@@ -96,7 +103,7 @@ async function loadContacts() {
         (contact) =>
           "<tr>" +
           "<td>" + contact.name + "</td>" +
-          "<td>" + contact.phoneNumber + "</td>" +
+          "<td class=\"mono\">" + contact.phoneNumber + "</td>" +
           "<td>" + contact.priority + "</td>" +
           "<td><button class=\"btn danger\" data-contact-id=\"" + contact.id + "\">Remove</button></td>" +
           "</tr>"
@@ -111,7 +118,7 @@ async function loadContacts() {
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">Could not load contacts: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">Could not load contacts: " + err.message + "</td></tr>";
   }
 }
 
