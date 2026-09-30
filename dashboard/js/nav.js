@@ -117,7 +117,7 @@ function startLive() {
   let busy = false;
   const editing = () => {
     const a = document.activeElement;
-    return a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.closest(".page-body");
+    return a && (/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.getAttribute("aria-expanded") === "true") && a.closest(".page-body");
   };
 
   async function poll() {
