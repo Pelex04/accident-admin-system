@@ -450,32 +450,3 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-muted);
   font-size: 13px;
 }
-
-/* Login page: navy shell, white card, echoing the site's dark hero + white panel */
-
-.login-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-alt) 60%, #123a5e 100%);
-}
-
-.login-box {
-  width: 340px;
-  background: var(--panel);
-  border-radius: 14px;
-  padding: 30px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-}
-
-.login-box h1 {
-  font-size: 17px;
-  font-weight: 700;
-  margin: 0 0 22px 0;
-  color: var(--text);
-}
-
-.login-box h1 .accent {
-  color: var(--brand);
-}
