@@ -7,7 +7,11 @@ const config = require('../config');
 const router = express.Router();
 
 router.post('/login', (req, res) => {
-  const { email, password } = req.body || {};
+  const rawEmail = (req.body && req.body.email) || '';
+  const rawPassword = (req.body && req.body.password) || '';
+
+  const email = rawEmail.trim().toLowerCase();
+  const password = rawPassword.trim();
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
