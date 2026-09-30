@@ -131,7 +131,7 @@ function render() {
     ? rows
         .map((r) =>
           "<tr><td>" + esc(r.v.name) + "</td><td>" + r.total + "</td><td>" + r.c.sent + "</td><td>" + r.c.cancelled + "</td><td>" + r.c.failed +
-          '</td><td class="mono">' + (r.last ? new Date(r.last).toLocaleString() : "\u2014") + "</td>" +
+          '</td><td class="mono" data-v="' + (r.last || "") + '">' + (r.last ? new Date(r.last).toLocaleString() : "\u2014") + "</td>" +
           '<td><span class="badge ' + r.sim.badge + '">' + r.sim.label + "</span></td></tr>")
         .join("")
     : '<tr class="empty-row"><td colspan="7">No vehicles registered yet.</td></tr>';
@@ -148,14 +148,18 @@ byId("vehicleSelect").addEventListener("change", render);
 
 enhanceTable(byId("summaryBody").closest("table"), { name: "vehicle summary" });
 
-(async function load() {
+async function loadReport() {
   try {
     const [events, vehicles, sims] = await Promise.all([api.getEvents(), api.getVehicles(), api.getSimStatuses()]);
     data = { events, vehicles, sims };
+    const keepVehicle = byId("vehicleSelect").value;
     byId("vehicleSelect").innerHTML =
       '<option value="">All vehicles</option>' + vehicles.map((v) => '<option value="' + esc(v.id) + '">' + esc(v.name) + "</option>").join("");
+    byId("vehicleSelect").value = keepVehicle;
     render();
   } catch (err) {
     byId("reportBody").innerHTML = '<div class="empty-state">Could not load reports: ' + esc(err.message) + "</div>";
   }
-})();
+}
+loadReport();
+window.onLiveUpdate = loadReport;

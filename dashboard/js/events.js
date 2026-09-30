@@ -38,7 +38,7 @@ async function loadEvents() {
         return (
           "<tr data-ts=\"" + event.detectedAt + "\">" +
           "<td><span class=\"dot " + dotForStatus(event.status) + "\"></span>" + vehicleName + "</td>" +
-          "<td class=\"mono\">" + new Date(event.detectedAt).toLocaleString() + "</td>" +
+          "<td class=\"mono\" data-v=\"" + event.detectedAt + "\"><a href=\"event.html?id=" + event.id + "\">" + new Date(event.detectedAt).toLocaleString() + "</a></td>" +
           "<td>" + event.status.replace(/_/g, " ") + "</td>" +
           "<td class=\"mono\">" + mapLink(event.latitude, event.longitude) + "</td>" +
           "<td class=\"muted\">" + (event.notes || "\u2014") + "</td>" +
@@ -62,6 +62,7 @@ async function loadEvents() {
     document.querySelectorAll("[data-event-id]").forEach((select) => {
       select.addEventListener("change", async () => {
         await api.updateEvent(select.dataset.eventId, { status: select.value });
+        toast("Status updated", "ok");
         loadEvents();
       });
     });
@@ -73,3 +74,5 @@ async function loadEvents() {
 document.getElementById("statusFilter").addEventListener("change", loadEvents);
 
 loadEvents();
+
+window.onLiveUpdate = loadEvents;

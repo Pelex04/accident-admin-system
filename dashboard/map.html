@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Crash map - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <div class="page-header">
+      <div>
+        <h1>Crash map</h1>
+        <p>Where each crash was reported.</p>
+      </div>
+      <div class="report-controls">
+        <select id="rangeSelect" aria-label="Date range">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="all" selected>All time</option>
+        </select>
+        <select id="vehicleSelect" aria-label="Vehicle"><option value="">All vehicles</option></select>
+        <select id="outcomeSelect" aria-label="Outcome">
+          <option value="">All outcomes</option>
+          <option value="alert_sent">Alert sent</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="alert_failed">Alert failed</option>
+          <option value="open">Open</option>
+        </select>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="map" class="map-canvas"></div>
+      <div id="mapLegend" class="map-legend"></div>
+      <p class="muted" id="mapNote"></p>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/table-tools.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/map.js"></script>
+</body>
+</html>

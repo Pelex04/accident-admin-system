@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Overview - Accident Detection Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,11 +20,11 @@
     </div>
 
     <div class="page-body">
-      <div class="stat-strip" id="statStrip"></div>
+      <div class="kpi-grid" id="kpis"></div>
 
       <div class="section">
         <div class="section-title">
-          <h2>Alerts</h2>
+          <h2>Needs attention</h2>
         </div>
         <div id="alertsContainer"><div class="empty-state">Loading alerts...</div></div>
       </div>
@@ -50,6 +51,7 @@
 </div>
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/table-tools.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
 </html>

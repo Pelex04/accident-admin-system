@@ -23,10 +23,10 @@ async function loadVehicles() {
 
         return (
           "<tr data-ts=\"" + vehicle.registeredAt + "\">" +
-          "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + vehicle.name + "</td>" +
+          "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + "<a href=\"vehicle.html?id=" + vehicle.id + "\">" + vehicle.name + "</a></td>" +
           "<td class=\"mono\">" + vehicle.arduinoSimNumber + "</td>" +
           "<td><span class=\"badge " + (isActive ? "ok" : "neutral") + "\">" + vehicle.status + "</span></td>" +
-          "<td class=\"mono\">" + new Date(vehicle.registeredAt).toLocaleDateString() + "</td>" +
+          "<td class=\"mono\" data-v=\"" + vehicle.registeredAt + "\">" + new Date(vehicle.registeredAt).toLocaleDateString() + "</td>" +
           "<td>" + contacts.length + "</td>" +
           "<td class=\"actions-cell\">" +
           "<button class=\"btn secondary\" data-action=\"contacts\" data-id=\"" + vehicle.id + "\" data-name=\"" + vehicle.name + "\">Contacts</button>" +
@@ -56,16 +56,18 @@ function attachRowHandlers() {
     button.addEventListener("click", async () => {
       const newStatus = button.dataset.status === "active" ? "inactive" : "active";
       await api.updateVehicle(button.dataset.id, { status: newStatus });
+      toast(newStatus === "active" ? "Vehicle activated" : "Vehicle deactivated", "ok");
       loadVehicles();
     });
   });
 
   document.querySelectorAll("[data-action='delete']").forEach((button) => {
     button.addEventListener("click", async () => {
-      if (!confirm("Delete this vehicle and its contacts?")) {
+      if (!(await confirmDialog("Delete this vehicle and its contacts?", "Delete"))) {
         return;
       }
       await api.deleteVehicle(button.dataset.id);
+      toast("Vehicle deleted", "ok");
       if (selectedVehicleId === button.dataset.id) {
         document.getElementById("contactsSection").style.display = "none";
         selectedVehicleId = null;
@@ -168,3 +170,5 @@ document.getElementById("addContactButton").addEventListener("click", async () =
 });
 
 loadVehicles();
+
+window.onLiveUpdate = loadVehicles;

@@ -56,7 +56,7 @@ async function loadSimStatuses() {
         return (
           "<tr>" +
           "<td><span class=\"dot " + dot + "\"></span>" + vehicle.name + "</td>" +
-          "<td class=\"mono\">" + new Date(status.lastHeartbeatAt).toLocaleString() + "</td>" +
+          "<td class=\"mono\" data-v=\"" + (status.lastHeartbeatAt || "") + "\">" + new Date(status.lastHeartbeatAt).toLocaleString() + "</td>" +
           "<td class=\"mono\">" + (status.lastKnownBalanceText || "\u2014") + "</td>" +
           "<td>" + badge + "</td>" +
           "<td>" + action + "</td>" +
@@ -68,6 +68,7 @@ async function loadSimStatuses() {
     document.querySelectorAll("[data-vehicle-id]").forEach((button) => {
       button.addEventListener("click", async () => {
         await api.markToppedUp(button.dataset.vehicleId);
+        toast("Marked as topped up", "ok");
         loadSimStatuses();
       });
     });
@@ -77,3 +78,5 @@ async function loadSimStatuses() {
 }
 
 loadSimStatuses();
+
+window.onLiveUpdate = loadSimStatuses;

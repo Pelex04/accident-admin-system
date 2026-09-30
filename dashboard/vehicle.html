@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Vehicle - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <div class="page-header">
+      <div>
+        <a class="back-link" href="vehicles.html">&larr; Vehicles</a>
+        <h1 id="vTitle">Vehicle</h1>
+        <p id="vSub"></p>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="kpi-grid" id="kpis"></div>
+      <div class="detail-grid">
+        <div class="card"><h2>Details</h2><dl class="facts" id="facts"></dl><div style="margin-top:16px" id="factActions"></div></div>
+        <div class="card"><h2>SIM</h2><dl class="facts" id="simFacts"></dl><div style="margin-top:16px" id="simActions"></div></div>
+      </div>
+      <div class="section">
+        <div class="section-title"><h2>Emergency contacts</h2></div>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Phone number</th><th>Priority</th></tr></thead>
+          <tbody id="contactsBody"></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <div class="section-title"><h2>Crash history</h2></div>
+        <table class="data-table">
+          <thead><tr><th>Detected</th><th data-filter>Status</th><th>Location</th><th>Notes</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/table-tools.js"></script>
+<script src="js/vehicle.js"></script>
+</body>
+</html>

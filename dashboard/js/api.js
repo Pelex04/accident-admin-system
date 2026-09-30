@@ -75,6 +75,7 @@ const api = {
     const query = new URLSearchParams(params || {}).toString();
     return apiRequest("/events" + (query ? "?" + query : ""));
   },
+  getEvent: (id) => apiRequest("/events/" + id),
   updateEvent: (id, payload) => apiRequest("/events/" + id, { method: "PUT", body: payload }),
 
   getSimStatuses: () => apiRequest("/sim"),
