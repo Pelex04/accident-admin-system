@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:4000/api";
+const API_BASE_URL = "https://accident-admin-system.onrender.com/api";
 
 function getToken() {
   return localStorage.getItem("adminToken");
