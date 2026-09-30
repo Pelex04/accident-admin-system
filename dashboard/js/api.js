@@ -35,9 +35,9 @@ async function apiRequest(path, options) {
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && token) {
     clearToken();
-    window.location.href = "login.html";
+    window.location.href = "login.html?reason=expired";
     throw new Error("Not authenticated");
   }
 

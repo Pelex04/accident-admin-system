@@ -216,3 +216,73 @@ body {
   .trace-line { animation: none; stroke-dashoffset: 0; }
   .submit, .field input { transition: none; }
 }
+
+/* Brand, trace states, notices, server status */
+
+.s1 { stop-color: var(--t1, #1c7ed6); }
+.s2 { stop-color: var(--t2, #17c3c2); }
+.trace.alarm { --t1: #ff5a5f; --t2: #ff8f8f; }
+
+.auth-brand { display: flex; align-items: center; gap: 12px; }
+.mark { width: 30px; height: 30px; flex: none; }
+
+.trace-spikes { transform-origin: 0 90px; transition: transform 0.5s ease, opacity 0.5s ease; }
+.trace.ok .trace-spikes { transform: scaleY(0.02); opacity: 0; }
+
+.trace-flat { stroke: var(--teal); stroke-width: 2.5; stroke-linecap: round; opacity: 0; transition: opacity 0.5s ease 0.25s; }
+.trace.ok .trace-flat { opacity: 1; }
+
+.trace.alarm .trace-wrap { animation: jolt 0.5s ease; }
+@keyframes jolt {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-10px); }
+  30% { transform: translateX(10px); }
+  45% { transform: translateX(-7px); }
+  60% { transform: translateX(5px); }
+  80% { transform: translateX(-2px); }
+}
+
+.auth-notice {
+  margin: -8px 0 20px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #0b4a8a;
+  background: #e6f1fc;
+  border-radius: 8px;
+}
+.auth-notice[hidden], .caps-note[hidden] { display: none; }
+
+.caps-note { margin: 6px 0 0; font-size: 13px; color: #8a5a00; }
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.remember input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand-dark); }
+
+.server-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #8a95ad; }
+.dot[data-state="ready"] { background: #1a8f57; }
+.dot[data-state="waking"] { background: #c88a14; }
+.dot[data-state="offline"] { background: var(--danger); }
+.dot[data-state="checking"], .dot[data-state="waking"] { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-spikes, .trace-flat { transition: none; }
+  .trace.alarm .trace-wrap, .dot { animation: none; }
+}

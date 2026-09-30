@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign in - Accident Detection Admin</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,15 +12,18 @@
 </head>
 <body>
 <main class="auth">
-  <section class="auth-story" aria-hidden="false">
-    <p class="auth-brand">Accident Detection Admin</p>
+  <section class="auth-story">
+    <div class="auth-brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c7ed6"/><path d="M5 17h6l2.5-9 4 16 2.5-7H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Accident Detection Admin</span>
+    </div>
     <div class="auth-hero">
-      <svg class="trace" viewBox="0 0 560 170" role="img" aria-label="Impact sensor reading spiking at the moment of a crash">
+      <svg class="trace" id="trace" viewBox="0 0 560 170" role="img" aria-label="Impact sensor reading spiking at the moment of a crash">
         <defs>
           <linearGradient id="traceGrad" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stop-color="#1c7ed6"/>
-            <stop offset="0.5" stop-color="#17c3c2"/>
-            <stop offset="1" stop-color="#17c3c2"/>
+            <stop offset="0" class="s1"/>
+            <stop offset="0.5" class="s2"/>
+            <stop offset="1" class="s2"/>
           </linearGradient>
         </defs>
         <g class="trace-grid">
@@ -27,8 +31,13 @@
           <line x1="0" x2="560" y1="90" y2="90"/>
           <line x1="0" x2="560" y1="150" y2="150"/>
         </g>
-        <path class="trace-line" pathLength="1"
-          d="M0 90 L60 90 L80 86 L100 94 L130 88 L170 91 L210 90 L240 89 L262 90 L272 14 L284 162 L296 34 L308 140 L322 58 L336 118 L352 76 L368 104 L390 84 L410 96 L440 88 L480 91 L520 90 L560 90"/>
+        <g class="trace-wrap">
+          <g class="trace-spikes">
+            <path class="trace-line" pathLength="1"
+              d="M0 90 L60 90 L80 86 L100 94 L130 88 L170 91 L210 90 L240 89 L262 90 L272 14 L284 162 L296 34 L308 140 L322 58 L336 118 L352 76 L368 104 L390 84 L410 96 L440 88 L480 91 L520 90 L560 90"/>
+          </g>
+          <line class="trace-flat" x1="0" x2="560" y1="90" y2="90"/>
+        </g>
       </svg>
       <h1>Know the moment a crash happens.</h1>
       <p class="auth-lede">Manage vehicles, emergency contacts and SIM airtime across every deployed device, and follow each crash alert from detection to delivery.</p>
@@ -39,6 +48,7 @@
     <form class="auth-form" id="loginForm" novalidate>
       <h2>Sign in</h2>
       <p class="auth-sub">Use your admin account to open the dashboard.</p>
+      <p class="auth-notice" id="notice" role="status" hidden></p>
 
       <div class="field">
         <label for="email">Email</label>
@@ -51,10 +61,18 @@
           <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Your password" required>
           <button type="button" class="toggle-pw" id="togglePassword" aria-pressed="false" aria-controls="password">Show</button>
         </div>
+        <p class="caps-note" id="capsNote" role="status" hidden>Caps Lock is on.</p>
       </div>
+
+      <label class="remember"><input type="checkbox" id="remember"> Remember my email on this device</label>
 
       <div class="error-text" id="errorText" role="alert" aria-live="polite"></div>
       <button type="submit" class="submit" id="loginButton">Sign in</button>
+
+      <p class="server-status" role="status">
+        <span class="dot" id="statusDot" data-state="checking"></span>
+        <span id="statusText">Checking the server...</span>
+      </p>
     </form>
   </section>
 </main>

@@ -34,6 +34,6 @@ function renderSidebar(activePage) {
   document.getElementById("logoutLink").addEventListener("click", (event) => {
     event.preventDefault();
     clearToken();
-    window.location.href = "login.html";
+    window.location.href = "login.html?reason=signedout";
   });
 }
