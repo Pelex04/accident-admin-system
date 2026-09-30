@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Reports - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <div class="page-header">
+      <div>
+        <h1>Reports</h1>
+        <p>Crash activity, alert delivery and SIM health across the fleet.</p>
+      </div>
+      <div class="report-controls">
+        <select id="rangeSelect" aria-label="Date range">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="all">All time</option>
+        </select>
+        <select id="vehicleSelect" aria-label="Vehicle"><option value="">All vehicles</option></select>
+        <button type="button" class="btn secondary" id="exportEvents">Export events CSV</button>
+        <button type="button" class="btn secondary" id="printReport">Print or save PDF</button>
+      </div>
+    </div>
+
+    <div class="page-body" id="reportBody">
+      <div class="stat-strip" id="statStrip"></div>
+
+      <div class="chart-grid">
+        <div class="card wide"><h2 id="timelineTitle">Crashes over time</h2><div id="timelineChart"></div></div>
+        <div class="card"><h2>Outcomes</h2><div id="outcomeChart"></div></div>
+        <div class="card"><h2>SIM health</h2><div id="simChart"></div></div>
+        <div class="card"><h2>Crashes by vehicle</h2><div id="vehicleChart"></div></div>
+        <div class="card"><h2>Crashes by hour of day</h2><div id="hourChart"></div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><h2>Vehicle summary</h2></div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Vehicle</th>
+              <th>Crashes</th>
+              <th>Alerts sent</th>
+              <th>Cancelled</th>
+              <th>Alerts failed</th>
+              <th>Last crash</th>
+              <th data-filter>SIM status</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/table-tools.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/reports.js"></script>
+</body>
+</html>

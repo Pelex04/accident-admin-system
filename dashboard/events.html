@@ -33,12 +33,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Vehicle</th>
+              <th data-filter>Vehicle</th>
               <th>Detected</th>
               <th>Status</th>
               <th>Location</th>
               <th>Notes</th>
-              <th>Update</th>
+              <th data-noexport>Update</th>
             </tr>
           </thead>
           <tbody id="eventsTableBody"></tbody>
@@ -50,5 +50,9 @@
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/events.js"></script>
+<script src="js/table-tools.js"></script>
+<script>
+enhanceTable(document.getElementById("eventsTableBody").closest("table"), { name: "crash events", dates: true });
+</script>
 </body>
 </html>

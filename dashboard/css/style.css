@@ -450,3 +450,43 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-muted);
   font-size: 13px;
 }
+
+/* Table tools */
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.toolbar input, .toolbar select { width: auto; height: 36px; }
+.toolbar .tt-search { width: 260px; max-width: 100%; }
+.tt-filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.tt-date { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.tt-count { margin-left: auto; font-size: 12px; }
+.tt-none { padding: 24px; text-align: center; font-size: 13px; color: var(--text-muted); }
+
+/* Reports */
+
+.report-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.report-controls select { width: auto; }
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 32px; }
+.chart-grid .wide { grid-column: 1 / -1; }
+.chart { display: block; width: 100%; height: auto; }
+.chart .grid { stroke: var(--border); stroke-width: 1; }
+.chart .axis { font-family: var(--font-ui); font-size: 11px; fill: var(--text-muted); }
+.chart .axis.strong { fill: var(--text); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; color: var(--text-muted); }
+.legend b { margin-left: 2px; color: var(--text); }
+.swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; }
+.donut { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.donut svg { flex: none; width: 160px; height: 160px; }
+.donut .legend { flex-direction: column; margin: 0; }
+.donut-total { font-family: var(--font-mono); font-size: 26px; font-weight: 700; fill: var(--text); }
+
+@media (max-width: 900px) {
+  .chart-grid { grid-template-columns: 1fr; }
+  .page-header { flex-wrap: wrap; gap: 12px; }
+}
+
+@media print {
+  .sidebar, .report-controls, .toolbar { display: none !important; }
+  .page-header { border: 0; }
+  .stat-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card, .section { break-inside: avoid; }
+}

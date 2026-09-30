@@ -5,7 +5,8 @@ function renderSidebar(activePage) {
     { key: "overview", label: "Overview", href: "index.html" },
     { key: "vehicles", label: "Vehicles", href: "vehicles.html" },
     { key: "events", label: "Crash events", href: "events.html" },
-    { key: "sim", label: "SIM status", href: "sim.html" }
+    { key: "sim", label: "SIM status", href: "sim.html" },
+    { key: "reports", label: "Reports", href: "reports.html" }
   ];
 
   const linksHtml = items
