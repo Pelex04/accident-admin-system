@@ -36,7 +36,7 @@ async function loadEvents() {
         const vehicleName = vehicle ? vehicle.name : "Unknown vehicle";
 
         return (
-          "<tr data-ts=\"" + event.detectedAt + "\">" +
+          "<tr data-id=\"" + event.id + "\" data-ts=\"" + event.detectedAt + "\">" +
           "<td><span class=\"dot " + dotForStatus(event.status) + "\"></span>" + vehicleName + "</td>" +
           "<td class=\"mono\" data-v=\"" + event.detectedAt + "\"><a href=\"event.html?id=" + event.id + "\">" + new Date(event.detectedAt).toLocaleString() + "</a></td>" +
           "<td>" + event.status.replace(/_/g, " ") + "</td>" +

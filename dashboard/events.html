@@ -52,8 +52,15 @@
 <script src="js/nav.js"></script>
 <script src="js/events.js"></script>
 <script src="js/table-tools.js"></script>
+<script src="js/bulk.js"></script>
 <script>
 enhanceTable(document.getElementById("eventsTableBody").closest("table"), { name: "crash events", dates: true });
+enableBulk(document.getElementById("eventsTableBody").closest("table"), {
+  noun: "crash events",
+  actions: ["detected", "countdown", "cancelled", "alert_sent", "alert_failed"].map((s) => ({ value: s, label: "Set to " + s.replace(/_/g, " ") })),
+  apply: (id, status) => api.updateEvent(id, { status }),
+  reload: () => loadEvents()
+});
 </script>
 </body>
 </html>

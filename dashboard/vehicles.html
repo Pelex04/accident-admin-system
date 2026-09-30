@@ -17,6 +17,7 @@
         <h1>Vehicles</h1>
         <p>Every registered device and its emergency contacts.</p>
       </div>
+      <div><button type="button" class="btn secondary" id="importVehicles">Import CSV</button></div>
     </div>
 
     <div class="page-body">
@@ -93,9 +94,77 @@
 <script src="js/nav.js"></script>
 <script src="js/vehicles.js"></script>
 <script src="js/table-tools.js"></script>
+<script src="js/bulk.js"></script>
 <script>
 enhanceTable(document.getElementById("vehiclesTableBody").closest("table"), { name: "vehicles", dates: true });
 enhanceTable(document.getElementById("contactsTableBody").closest("table"), { name: "contacts" });
+
+enableBulk(document.getElementById("vehiclesTableBody").closest("table"), {
+  noun: "vehicles",
+  actions: [{ value: "active", label: "Activate" }, { value: "inactive", label: "Deactivate" }, { value: "delete", label: "Delete", danger: true }],
+  apply: (id, value) => (value === "delete" ? api.deleteVehicle(id) : api.updateVehicle(id, { status: value })),
+  reload: () => loadVehicles()
+});
+
+const digits = (v) => String(v).replace(/[\s()-]/g, "");
+const phoneOk = (v) => /^\+?\d[\d\s()-]{6,18}$/.test(v);
+
+document.getElementById("importVehicles").addEventListener("click", async () => {
+  let existing = new Set();
+  try { existing = new Set((await api.getVehicles()).map((v) => digits(v.arduinoSimNumber))); } catch (err) { /* checked again by the server */ }
+  openImport({
+    title: "Import vehicles",
+    columns: [
+      { key: "name", label: "name", required: true, aliases: ["vehicle", "plate", "drivername"] },
+      { key: "arduinoSimNumber", label: "SIM number", required: true, aliases: ["sim", "simnumber", "phone", "phonenumber"] }
+    ],
+    template: [["name", "SIM number"], ["Driver or plate number", "+265991234567"]],
+    check: (r, seen) => {
+      if (!phoneOk(r.arduinoSimNumber)) return "SIM number looks invalid";
+      const key = digits(r.arduinoSimNumber);
+      if (existing.has(key)) return "SIM number is already registered";
+      if (seen.has(key)) return "SIM number is repeated in this file";
+      seen.add(key);
+      return null;
+    },
+    run: (r) => api.createVehicle({ name: r.name, arduinoSimNumber: r.arduinoSimNumber }),
+    done: () => loadVehicles()
+  });
+});
+
+const contactsTitleBar = document.querySelector("#contactsSection .section-title");
+const importContacts = document.createElement("button");
+importContacts.type = "button";
+importContacts.className = "btn secondary";
+importContacts.textContent = "Import CSV";
+contactsTitleBar.appendChild(importContacts);
+importContacts.addEventListener("click", () => {
+  const vehicleId = selectedVehicleId;
+  if (!vehicleId) return;
+  openImport({
+    title: "Import contacts",
+    columns: [
+      { key: "name", label: "name", required: true },
+      { key: "phoneNumber", label: "phone number", required: true, aliases: ["phone", "number"] },
+      { key: "priority", label: "priority", required: false }
+    ],
+    template: [["name", "phone number", "priority"], ["Contact name", "+265888111222", "1"]],
+    check: (r, seen) => {
+      if (!phoneOk(r.phoneNumber)) return "Phone number looks invalid";
+      if (r.priority && !/^[1-9]\d?$/.test(r.priority)) return "Priority must be a whole number from 1 to 99";
+      const key = digits(r.phoneNumber);
+      if (seen.has(key)) return "Phone number is repeated in this file";
+      seen.add(key);
+      return null;
+    },
+    run: (r) => api.addVehicleContact(vehicleId, { name: r.name, phoneNumber: r.phoneNumber, priority: Number(r.priority) || 1 }),
+    done: async () => {
+      await loadVehicles();
+      const button = document.querySelector("[data-action='contacts'][data-id='" + vehicleId + "']");
+      if (button) button.click();
+    }
+  });
+});
 </script>
 </body>
 </html>

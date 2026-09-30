@@ -22,7 +22,7 @@ async function loadVehicles() {
         const isActive = vehicle.status === "active";
 
         return (
-          "<tr data-ts=\"" + vehicle.registeredAt + "\">" +
+          "<tr data-id=\"" + vehicle.id + "\" data-ts=\"" + vehicle.registeredAt + "\">" +
           "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + "<a href=\"vehicle.html?id=" + vehicle.id + "\">" + vehicle.name + "</a></td>" +
           "<td class=\"mono\">" + vehicle.arduinoSimNumber + "</td>" +
           "<td><span class=\"badge " + (isActive ? "ok" : "neutral") + "\">" + vehicle.status + "</span></td>" +

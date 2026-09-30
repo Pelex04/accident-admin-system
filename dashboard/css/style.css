@@ -578,3 +578,19 @@ textarea { min-height: 84px; resize: vertical; }
 }
 
 @media print { .topbar, .scrim, .toasts, .pager { display: none !important; } }
+
+/* Bulk tools and import dialog */
+
+.bulkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px 12px; background: var(--brand-dim); border-radius: 8px; }
+.bulkbar[hidden] { display: none; }
+.bulkbar select { width: auto; height: 34px; }
+.bulk-count { font-weight: 600; }
+.bulk-check, .bulk-all { width: 16px; height: 16px; margin: 0 8px 0 0; vertical-align: middle; accent-color: var(--brand-dark); cursor: pointer; }
+.modal.wide { max-width: 560px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.modal h2 { margin: 0 0 8px; font-size: 16px; }
+.modal .muted { margin: 0 0 12px; }
+.modal textarea { margin-top: 10px; font-family: var(--font-mono); font-size: 12px; }
+.import-summary { margin: 12px 0 4px; font-size: 13px; font-weight: 600; color: var(--text); }
+.import-problems { margin: 4px 0 10px; padding-left: 18px; font-size: 13px; color: var(--danger); }
+.import-problems:empty { display: none; }
+.import-preview { margin-bottom: 16px; overflow-x: auto; }
