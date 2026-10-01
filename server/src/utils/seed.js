@@ -1,73 +1,62 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db/database');
+const db = require('../db');
 const config = require('../config');
 
-function seedDemoData() {
-  if (db.get('vehicles').size().value() > 0) {
-    console.log('Demo vehicles already exist, skipping demo data seed.');
+// The server calls this with onlyIfEmpty, so a brand new database always has a first super admin.
+// `npm run seed` calls it without, which creates the SEED_ADMIN_EMAIL account if it is missing.
+async function ensureSeedAdmin(options) {
+  if (options && options.onlyIfEmpty) {
+    const count = Number((await db.get('SELECT COUNT(*) AS n FROM admin_users')).n);
+    if (count > 0) return false;
+  } else if (await db.get('SELECT id FROM admin_users WHERE email = ?', [config.seedAdminEmail])) {
+    console.log('Seed admin already exists, skipping: ' + config.seedAdminEmail);
+    return false;
+  }
+
+  const usingDefault = config.seedAdminPassword === config.defaultSeedPassword;
+  await db.run(
+    'INSERT INTO admin_users (id, email, password_hash, role, active, must_change_password, token_version, created_at) VALUES (?, ?, ?, ?, 1, ?, 0, ?)',
+    [uuidv4(), config.seedAdminEmail, await bcrypt.hash(config.seedAdminPassword, 10), 'super_admin', usingDefault ? 1 : 0, new Date().toISOString()]
+  );
+
+  console.log('Seed admin created: ' + config.seedAdminEmail);
+  if (usingDefault) console.log('It uses the default password, which must be changed at first sign in. Set SEED_ADMIN_PASSWORD to choose your own.');
+  return true;
+}
+
+async function seedDemoData() {
+  const count = Number((await db.get('SELECT COUNT(*) AS n FROM vehicles')).n);
+  if (count > 0) {
+    console.log('Vehicles already exist, skipping demo data seed.');
     return;
   }
 
   const vehicleId = uuidv4();
+  const now = new Date().toISOString();
 
-  db.get('vehicles')
-    .push({
-      id: vehicleId,
-      name: 'Demo Vehicle - Toyota Corolla',
-      arduinoSimNumber: '+265991000001',
-      status: 'active',
-      registeredAt: new Date().toISOString()
-    })
-    .write();
-
-  db.get('contacts')
-    .push({
-      id: uuidv4(),
-      vehicleId,
-      name: 'Demo Emergency Contact',
-      phoneNumber: '+265888000001',
-      priority: 1
-    })
-    .write();
-
-  db.get('simStatuses')
-    .push({
-      id: uuidv4(),
-      vehicleId,
-      lastHeartbeatAt: new Date().toISOString(),
-      lastKnownBalanceText: 'Main balance MWK 500, valid until end of month',
-      lowBalanceFlag: false,
-      lastCheckedAt: new Date().toISOString()
-    })
-    .write();
+  await db.run('INSERT INTO vehicles (id, name, arduino_sim_number, status, registered_at) VALUES (?, ?, ?, ?, ?)',
+    [vehicleId, 'Demo Vehicle - Toyota Corolla', '+265991000001', 'active', now]);
+  await db.run('INSERT INTO contacts (id, vehicle_id, name, phone_number, priority) VALUES (?, ?, ?, ?, ?)',
+    [uuidv4(), vehicleId, 'Demo Emergency Contact', '+265888000001', 1]);
+  await db.run(
+    'INSERT INTO sim_statuses (id, vehicle_id, last_heartbeat_at, last_known_balance_text, low_balance_flag, last_checked_at) VALUES (?, ?, ?, ?, 0, ?)',
+    [uuidv4(), vehicleId, now, 'Main balance MWK 500, valid until end of month', now]
+  );
 
   console.log('Demo vehicle, contact, and sim status created.');
 }
 
-function seedAdmin() {
-  const existing = db.get('adminUsers').find({ email: config.seedAdminEmail }).value();
+module.exports = { ensureSeedAdmin, seedDemoData };
 
-  if (existing) {
-    console.log('Seed admin already exists, skipping: ' + config.seedAdminEmail);
-    return;
-  }
-
-  const passwordHash = bcrypt.hashSync(config.seedAdminPassword, 10);
-
-  db.get('adminUsers')
-    .push({
-      id: uuidv4(),
-      email: config.seedAdminEmail,
-      passwordHash,
-      role: 'super_admin',
-      createdAt: new Date().toISOString()
-    })
-    .write();
-
-  console.log('Seed admin created: ' + config.seedAdminEmail);
-  console.log('Change the password after first login.');
+if (require.main === module) {
+  (async () => {
+    await db.init();
+    await ensureSeedAdmin();
+    await seedDemoData();
+    await db.close();
+  })().catch((err) => {
+    console.error('Seed failed:', err);
+    process.exit(1);
+  });
 }
-
-seedAdmin();
-seedDemoData();

@@ -1,39 +1,29 @@
-const express = require('express');
-const cors = require('cors');
 const config = require('./config');
+const db = require('./db');
+const { createApp } = require('./app');
+const { ensureJwtSecret, flagDefaultPasswords } = require('./utils/security');
+const { ensureSeedAdmin } = require('./utils/seed');
 
-const authRoutes = require('./routes/auth.routes');
-const vehiclesRoutes = require('./routes/vehicles.routes');
-const contactsRoutes = require('./routes/contacts.routes');
-const eventsRoutes = require('./routes/events.routes');
-const simRoutes = require('./routes/sim.routes');
-const alertsRoutes = require('./routes/alerts.routes');
+async function main() {
+  await db.init();
+  await ensureJwtSecret();
+  await ensureSeedAdmin({ onlyIfEmpty: true });
+  await flagDefaultPasswords();
 
-const app = express();
+  if (db.dialect === 'sqlite' && (process.env.RENDER || process.env.NODE_ENV === 'production')) {
+    console.warn('WARNING: DATABASE_URL is not set, so data is kept in a local file that is erased on every redeploy. Set DATABASE_URL to a PostgreSQL database.');
+  }
 
-app.use(cors());
-app.use(express.json());
+  const server = createApp().listen(config.port, () => {
+    console.log('Admin API listening on port ' + config.port + ' (' + db.dialect + ')');
+  });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
+  const stop = () => server.close(() => db.close().finally(() => process.exit(0)));
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
+}
 
-app.use('/api/auth', authRoutes);
-app.use('/api/vehicles', vehiclesRoutes);
-app.use('/api/contacts', contactsRoutes);
-app.use('/api/events', eventsRoutes);
-app.use('/api/sim', simRoutes);
-app.use('/api/alerts', alertsRoutes);
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-app.listen(config.port, () => {
-  console.log('Admin API listening on port ' + config.port);
+main().catch((err) => {
+  console.error('Failed to start:', err);
+  process.exit(1);
 });

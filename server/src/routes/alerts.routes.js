@@ -1,29 +1,30 @@
 const express = require('express');
-const db = require('../db/database');
+const db = require('../db');
 const config = require('../config');
 const { requireAuth } = require('../middleware/auth');
+const { wrap } = require('../utils/http');
+const { sim: toSim, event: toEvent } = require('../utils/serializers');
 
 const router = express.Router();
-
 router.use(requireAuth);
 
 function minutesSince(isoString) {
-  if (!isoString) {
-    return Infinity;
-  }
+  if (!isoString) return Infinity;
   return (Date.now() - new Date(isoString).getTime()) / 60000;
 }
 
-router.get('/', (req, res) => {
-  const vehicles = db.get('vehicles').value();
-  const simStatuses = db.get('simStatuses').value();
-  const crashEvents = db.get('crashEvents').value();
-
+router.get('/', wrap(async (req, res) => {
+  const [vehicleRows, simRows, eventRows] = await Promise.all([
+    db.all('SELECT id, name FROM vehicles'),
+    db.all('SELECT * FROM sim_statuses'),
+    db.all("SELECT * FROM crash_events WHERE status IN ('alert_sent', 'alert_failed')")
+  ]);
+  const names = new Map(vehicleRows.map((v) => [v.id, v.name]));
+  const nameOf = (id) => names.get(id) || 'Unknown vehicle';
   const alerts = [];
 
-  simStatuses.forEach((status) => {
-    const vehicle = vehicles.find((item) => item.id === status.vehicleId);
-    const vehicleName = vehicle ? vehicle.name : 'Unknown vehicle';
+  simRows.map(toSim).forEach((status) => {
+    const vehicleName = nameOf(status.vehicleId);
 
     if (status.lowBalanceFlag) {
       alerts.push({
@@ -46,24 +47,18 @@ router.get('/', (req, res) => {
     }
   });
 
-  crashEvents
-    .filter((event) => event.status === 'alert_sent' || event.status === 'alert_failed')
-    .forEach((event) => {
-      const vehicle = vehicles.find((item) => item.id === event.vehicleId);
-      const vehicleName = vehicle ? vehicle.name : 'Unknown vehicle';
-
-      alerts.push({
-        type: event.status === 'alert_failed' ? 'crash_alert_failed' : 'crash_alert_sent',
-        vehicleId: event.vehicleId,
-        vehicleName,
-        message: 'Crash event ' + event.status.replace('_', ' ') + ' for ' + vehicleName,
-        at: event.detectedAt
-      });
+  eventRows.map(toEvent).forEach((event) => {
+    const vehicleName = nameOf(event.vehicleId);
+    alerts.push({
+      type: event.status === 'alert_failed' ? 'crash_alert_failed' : 'crash_alert_sent',
+      vehicleId: event.vehicleId,
+      vehicleName,
+      message: 'Crash event ' + event.status.replace('_', ' ') + ' for ' + vehicleName,
+      at: event.detectedAt
     });
+  });
 
-  const sorted = alerts.sort((a, b) => new Date(b.at) - new Date(a.at));
-
-  return res.json(sorted);
-});
+  return res.json(alerts.sort((a, b) => new Date(b.at) - new Date(a.at)));
+}));
 
 module.exports = router;

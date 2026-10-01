@@ -1,5 +1,8 @@
 node_modules/
 server/data/db.json
+server/data/*.db
+server/data/*.db-*
+server/data/*.imported
 server/.env
 *.log
 .DS_Store
