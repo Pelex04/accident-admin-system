@@ -120,6 +120,7 @@ form.addEventListener("submit", async (event) => {
     serverState.ready = true;
     setToken(result.token);
     localStorage.setItem("adminEmail", result.admin.email);
+    localStorage.setItem("adminRole", result.admin.role);
     if (rememberBox.checked) {
       localStorage.setItem(EMAIL_KEY, email);
     } else {
@@ -128,7 +129,7 @@ form.addEventListener("submit", async (event) => {
     loginButton.textContent = "Signed in";
     trace.classList.add("ok");
     await delay(reduceMotion ? 0 : 750);
-    window.location.href = "index.html";
+    window.location.href = result.admin.mustChangePassword ? "change-password.html?forced=1" : "index.html";
   } catch (err) {
     const offline = err instanceof TypeError;
     errorText.textContent = offline

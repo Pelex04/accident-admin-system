@@ -22,18 +22,18 @@ async function loadVehicles() {
         const isActive = vehicle.status === "active";
 
         return (
-          "<tr data-id=\"" + vehicle.id + "\" data-ts=\"" + vehicle.registeredAt + "\">" +
-          "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + "<a href=\"vehicle.html?id=" + vehicle.id + "\">" + vehicle.name + "</a></td>" +
-          "<td class=\"mono\">" + vehicle.arduinoSimNumber + "</td>" +
-          "<td><span class=\"badge " + (isActive ? "ok" : "neutral") + "\">" + vehicle.status + "</span></td>" +
+          "<tr data-id=\"" + esc(vehicle.id) + "\" data-ts=\"" + vehicle.registeredAt + "\">" +
+          "<td><span class=\"dot " + (isActive ? "ok" : "neutral") + "\"></span>" + "<a href=\"vehicle.html?id=" + esc(vehicle.id) + "\">" + esc(vehicle.name) + "</a></td>" +
+          "<td class=\"mono\">" + esc(vehicle.arduinoSimNumber) + "</td>" +
+          "<td><span class=\"badge " + (isActive ? "ok" : "neutral") + "\">" + esc(vehicle.status) + "</span></td>" +
           "<td class=\"mono\" data-v=\"" + vehicle.registeredAt + "\">" + new Date(vehicle.registeredAt).toLocaleDateString() + "</td>" +
           "<td>" + contacts.length + "</td>" +
           "<td class=\"actions-cell\">" +
-          "<button class=\"btn secondary\" data-action=\"contacts\" data-id=\"" + vehicle.id + "\" data-name=\"" + vehicle.name + "\">Contacts</button>" +
-          "<button class=\"btn secondary\" data-action=\"toggle\" data-id=\"" + vehicle.id + "\" data-status=\"" + vehicle.status + "\">" +
+          "<button class=\"btn secondary\" data-action=\"contacts\" data-id=\"" + esc(vehicle.id) + "\" data-name=\"" + esc(vehicle.name) + "\">Contacts</button>" +
+          "<button class=\"btn secondary\" data-action=\"toggle\" data-id=\"" + esc(vehicle.id) + "\" data-status=\"" + esc(vehicle.status) + "\">" +
           (isActive ? "Deactivate" : "Activate") +
           "</button>" +
-          "<button class=\"btn danger\" data-action=\"delete\" data-id=\"" + vehicle.id + "\">Delete</button>" +
+          "<button class=\"btn danger\" data-action=\"delete\" data-id=\"" + esc(vehicle.id) + "\">Delete</button>" +
           "</td>" +
           "</tr>"
         );
@@ -43,7 +43,7 @@ async function loadVehicles() {
     tableBody.innerHTML = rows.join("");
     attachRowHandlers();
   } catch (err) {
-    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">Could not load vehicles: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">Could not load vehicles: " + esc(err.message) + "</td></tr>";
   }
 }
 
@@ -104,10 +104,10 @@ async function loadContacts() {
       .map(
         (contact) =>
           "<tr>" +
-          "<td>" + contact.name + "</td>" +
-          "<td class=\"mono\">" + contact.phoneNumber + "</td>" +
-          "<td>" + contact.priority + "</td>" +
-          "<td><button class=\"btn danger\" data-contact-id=\"" + contact.id + "\">Remove</button></td>" +
+          "<td>" + esc(contact.name) + "</td>" +
+          "<td class=\"mono\">" + esc(contact.phoneNumber) + "</td>" +
+          "<td>" + esc(contact.priority) + "</td>" +
+          "<td><button class=\"btn danger\" data-contact-id=\"" + esc(contact.id) + "\">Remove</button></td>" +
           "</tr>"
       )
       .join("");
@@ -120,7 +120,7 @@ async function loadContacts() {
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">Could not load contacts: " + err.message + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">Could not load contacts: " + esc(err.message) + "</td></tr>";
   }
 }
 

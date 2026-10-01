@@ -7,6 +7,16 @@ const NAV_ITEMS = [
   { key: "reports", label: "Reports", href: "reports.html" }
 ];
 
+const SUPER_ITEMS = [
+  { key: "admins", label: "Admins", href: "admins.html" },
+  { key: "audit", label: "Audit log", href: "audit.html" }
+];
+
+window.addEventListener("unhandledrejection", (event) => {
+  const message = event.reason && event.reason.message;
+  if (message && message !== "Not authenticated" && message !== "Password change required") toast(message, "danger");
+});
+
 const LOGO_MARK =
   '<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1c7ed6"/>' +
   '<path d="M5 17h6l2.5-9 4 16 2.5-7H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -67,7 +77,9 @@ function confirmDialog(message, okLabel) {
 }
 
 function renderSidebar(activePage) {
-  const linksHtml = NAV_ITEMS.map(
+  const role = localStorage.getItem("adminRole") || "viewer";
+  document.body.classList.add("role-" + role);
+  const linksHtml = NAV_ITEMS.concat(role === "super_admin" ? SUPER_ITEMS : []).map(
     (item) => '<a href="' + item.href + '"' + (item.key === activePage ? ' class="active" aria-current="page"' : "") + ">" + item.label + "</a>"
   ).join("");
 
@@ -78,8 +90,8 @@ function renderSidebar(activePage) {
     "<nav>" + linksHtml + "</nav>" +
     '<div class="sidebar-footer">' +
     '<div class="live"><span class="dot neutral" id="liveDot"></span><span id="liveText">Connecting...</span></div>' +
-    '<div class="who"></div><a href="#" id="logoutLink">Log out</a></div>';
-  sidebar.querySelector(".who").textContent = localStorage.getItem("adminEmail") || "Admin";
+    '<div class="who"></div><a href="change-password.html">Change password</a><a href="#" id="logoutLink">Log out</a></div>';
+  sidebar.querySelector(".who").textContent = (localStorage.getItem("adminEmail") || "Admin") + " (" + role.replace("_", " ") + ")";
 
   const layout = document.querySelector(".layout");
   layout.insertBefore(sidebar, layout.firstChild);

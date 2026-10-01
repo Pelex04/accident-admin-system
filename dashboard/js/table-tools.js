@@ -1,10 +1,5 @@
 // Shared helpers: search, filters, date range, sorting, paging and CSV export for any data table.
 
-function esc(value) {
-  return String(value === null || value === undefined ? "" : value)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 function csvCell(value) {
   let text = String(value === null || value === undefined ? "" : value);
   // Stop spreadsheets from running text as a formula.

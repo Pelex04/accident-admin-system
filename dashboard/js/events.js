@@ -5,8 +5,8 @@ function mapLink(latitude, longitude) {
   if (latitude === null || longitude === null || latitude === undefined || longitude === undefined) {
     return "\u2014";
   }
-  const url = "https://maps.google.com/?q=" + latitude + "," + longitude;
-  return "<a href=\"" + url + "\" target=\"_blank\">" + latitude + ", " + longitude + "</a>";
+  const lat = Number(latitude), lon = Number(longitude);
+  return '<a href="https://maps.google.com/?q=' + esc(lat) + "," + esc(lon) + '" target="_blank" rel="noopener">' + esc(lat) + ", " + esc(lon) + "</a>";
 }
 
 function dotForStatus(status) {
@@ -26,7 +26,7 @@ async function loadEvents() {
     ]);
 
     if (events.length === 0) {
-      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">No crash events match this filter.</td></tr>";
+      tableBody.innerHTML = '<tr class="empty-row"><td colspan="6">No crash events match this filter.</td></tr>';
       return;
     }
 
@@ -34,40 +34,37 @@ async function loadEvents() {
       .map((event) => {
         const vehicle = vehicles.find((v) => v.id === event.vehicleId);
         const vehicleName = vehicle ? vehicle.name : "Unknown vehicle";
+        const id = esc(event.id), at = esc(event.detectedAt);
 
         return (
-          "<tr data-id=\"" + event.id + "\" data-ts=\"" + event.detectedAt + "\">" +
-          "<td><span class=\"dot " + dotForStatus(event.status) + "\"></span>" + vehicleName + "</td>" +
-          "<td class=\"mono\" data-v=\"" + event.detectedAt + "\"><a href=\"event.html?id=" + event.id + "\">" + new Date(event.detectedAt).toLocaleString() + "</a></td>" +
-          "<td>" + event.status.replace(/_/g, " ") + "</td>" +
-          "<td class=\"mono\">" + mapLink(event.latitude, event.longitude) + "</td>" +
-          "<td class=\"muted\">" + (event.notes || "\u2014") + "</td>" +
-          "<td>" +
-          "<select data-event-id=\"" + event.id + "\">" +
+          '<tr data-id="' + id + '" data-ts="' + at + '">' +
+          '<td><span class="dot ' + dotForStatus(event.status) + '"></span>' + esc(vehicleName) + "</td>" +
+          '<td class="mono" data-v="' + at + '"><a href="event.html?id=' + id + '">' + esc(new Date(event.detectedAt).toLocaleString()) + "</a></td>" +
+          "<td>" + esc(event.status.replace(/_/g, " ")) + "</td>" +
+          '<td class="mono">' + mapLink(event.latitude, event.longitude) + "</td>" +
+          '<td class="muted">' + esc(event.notes || "\u2014") + "</td>" +
+          '<td><select data-event-id="' + id + '">' +
           ["detected", "countdown", "cancelled", "alert_sent", "alert_failed"]
-            .map(
-              (status) =>
-                "<option value=\"" + status + "\"" + (status === event.status ? " selected" : "") + ">" +
-                status.replace(/_/g, " ") +
-                "</option>"
-            )
+            .map((status) => '<option value="' + status + '"' + (status === event.status ? " selected" : "") + ">" + status.replace(/_/g, " ") + "</option>")
             .join("") +
-          "</select>" +
-          "</td>" +
-          "</tr>"
+          "</select></td></tr>"
         );
       })
       .join("");
 
     document.querySelectorAll("[data-event-id]").forEach((select) => {
       select.addEventListener("change", async () => {
-        await api.updateEvent(select.dataset.eventId, { status: select.value });
-        toast("Status updated", "ok");
+        try {
+          await api.updateEvent(select.dataset.eventId, { status: select.value });
+          toast("Status updated", "ok");
+        } catch (err) {
+          toast(err.message, "danger");
+        }
         loadEvents();
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"6\">Could not load events: " + err.message + "</td></tr>";
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="6">Could not load events: ' + esc(err.message) + "</td></tr>";
   }
 }
 

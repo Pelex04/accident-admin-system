@@ -625,3 +625,23 @@ textarea { min-height: 84px; resize: vertical; }
 
 @media (max-width: 600px) { .dd-menu li[role="option"] { padding-top: 12px; padding-bottom: 12px; } }
 @media (prefers-reduced-motion: reduce) { .dd-menu { animation: none; } .dd-chev, .dd-btn { transition: none; } }
+
+/* Modal forms, secrets, read-only roles */
+
+.modal label { display: block; margin: 12px 0 4px; font-size: 13px; font-weight: 500; }
+.modal input[type="email"], .modal input[type="text"] { width: 100%; }
+.modal .modal-actions { margin-top: 18px; }
+.secret-box { padding: 12px 14px; font-family: var(--font-mono); font-size: 15px; word-break: break-all; user-select: all; background: var(--page-bg, #f4f6fa); border: 1px dashed var(--border); border-radius: 8px; }
+
+.role-viewer .card:has(#addVehicleButton),
+.role-viewer .card:has(#addContactButton),
+.role-viewer #importVehicles,
+.role-viewer .actions-cell .btn:not([data-action="contacts"]),
+.role-viewer .bulkbar,
+.role-viewer .bulk-check,
+.role-viewer .bulk-all,
+.role-viewer [data-vehicle-id],
+.role-viewer #saveNotes,
+.role-viewer #toggleStatus,
+.role-viewer #toppedUp { display: none !important; }
+.role-viewer .data-table td .dd, .role-viewer #statusSelect + .dd { pointer-events: none; opacity: 0.7; }

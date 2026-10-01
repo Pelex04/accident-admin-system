@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Admins - Accident Detection Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="layout">
+  <div class="main">
+    <div class="page-header">
+      <div>
+        <h1>Admins</h1>
+        <p>Who can sign in and what they can do.</p>
+      </div>
+      <div><button type="button" class="btn" id="addAdmin">Add admin</button></div>
+    </div>
+    <div class="page-body" id="adminsRoot">
+      <p class="muted" style="margin-top: 0">
+        <b>Viewer</b> can look but not change anything. <b>Admin</b> can change vehicles, contacts, crash events and SIM status.
+        <b>Super admin</b> can also manage admins and read the audit log.
+      </p>
+      <div class="section">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th data-filter>Role</th>
+              <th data-filter>Status</th>
+              <th>Last sign in</th>
+              <th data-noexport>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/dropdown.js"></script>
+<script src="js/table-tools.js"></script>
+<script src="js/admins.js"></script>
+</body>
+</html>

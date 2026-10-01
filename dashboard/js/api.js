@@ -1,5 +1,11 @@
 const API_BASE_URL = "https://accident-admin-system.onrender.com/api";
 
+// Escapes text before it goes into innerHTML. Use it for anything that came from the server or a user.
+function esc(value) {
+  return String(value === null || value === undefined ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function getToken() {
   return localStorage.getItem("adminToken");
 }
@@ -11,6 +17,7 @@ function setToken(token) {
 function clearToken() {
   localStorage.removeItem("adminToken");
   localStorage.removeItem("adminEmail");
+  localStorage.removeItem("adminRole");
 }
 
 function requireAuthOrRedirect() {
@@ -39,6 +46,14 @@ async function apiRequest(path, options) {
     clearToken();
     window.location.href = "login.html?reason=expired";
     throw new Error("Not authenticated");
+  }
+
+  if (response.status === 403) {
+    const body = await response.clone().json().catch(() => null);
+    if (body && body.code === "password_change_required") {
+      window.location.href = "change-password.html?forced=1";
+      throw new Error("Password change required");
+    }
   }
 
   if (response.status === 204) {
@@ -82,5 +97,20 @@ const api = {
   getSimStatus: (vehicleId) => apiRequest("/sim/" + vehicleId),
   markToppedUp: (vehicleId) => apiRequest("/sim/" + vehicleId + "/mark-topped-up", { method: "POST" }),
 
-  getAlerts: () => apiRequest("/alerts")
+  getAlerts: () => apiRequest("/alerts"),
+
+  me: () => apiRequest("/auth/me"),
+  changePassword: (currentPassword, newPassword) =>
+    apiRequest("/auth/change-password", { method: "POST", body: { currentPassword, newPassword } }),
+
+  getAdmins: () => apiRequest("/admins"),
+  createAdmin: (payload) => apiRequest("/admins", { method: "POST", body: payload }),
+  updateAdmin: (id, payload) => apiRequest("/admins/" + id, { method: "PUT", body: payload }),
+  resetAdminPassword: (id) => apiRequest("/admins/" + id + "/reset-password", { method: "POST" }),
+  deleteAdmin: (id) => apiRequest("/admins/" + id, { method: "DELETE" }),
+
+  getAudit: (params) => {
+    const query = new URLSearchParams(params || {}).toString();
+    return apiRequest("/audit" + (query ? "?" + query : ""));
+  }
 };

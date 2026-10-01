@@ -71,3 +71,37 @@ Valid status values: detected, countdown, cancelled, alert_sent, alert_failed
 ## Health
 
 - GET /health - no auth required, returns { status: "ok", time }
+
+## Roles, admins and audit log
+
+Every route except `/api/health` and `/api/auth/login` needs `Authorization: Bearer <token>`.
+Read routes (GET) work for every role. Changes need `admin` or `super_admin`. A response of
+`403 { "code": "forbidden" }` means the role is too low, and `403 { "code": "password_change_required" }` means the
+account must call `POST /api/auth/change-password` first.
+
+### Auth
+
+- `POST /api/auth/login` `{ email, password }` returns `{ token, admin }`. `admin` has `id, email, role, active, mustChangePassword, createdAt, lastLoginAt`.
+  Returns `429` after too many attempts.
+- `GET /api/auth/me` returns the signed in admin.
+- `POST /api/auth/change-password` `{ currentPassword, newPassword }` returns a fresh `{ token, admin }`. All other sessions end.
+
+### Admins (super admin only)
+
+- `GET /api/admins`
+- `POST /api/admins` `{ email, role, password? }` returns `201 { admin, temporaryPassword }`. The temporary password appears only when the server generated it, and the new admin must change it at first sign in.
+- `PUT /api/admins/:id` `{ role?, active? }`. You cannot change your own role or status.
+- `POST /api/admins/:id/reset-password` returns `{ temporaryPassword }` and ends that admin's sessions.
+- `DELETE /api/admins/:id` returns `204`. You cannot delete yourself.
+
+### Audit log (super admin only)
+
+- `GET /api/audit?limit=200&action=vehicle&adminEmail=a@b.c&before=<ISO time>` returns entries newest first:
+  `{ id, at, adminId, adminEmail, action, entityType, entityId, summary, ip }`.
+  Actions: `auth.login`, `auth.login_failed`, `auth.password_changed`, `admin.*`, `vehicle.*`, `contact.*`, `event.*`, `sim.topped_up`.
+
+### Validation added
+
+Vehicle and contact names are 1 to 120 characters, phone numbers look like `+265991234567`, SIM numbers must be unique,
+contact priority is a whole number from 1 to 99, latitude is within -90 to 90 and longitude within -180 to 180, notes
+are at most 2000 characters. Deleting a vehicle also deletes its contacts and SIM status, and keeps its crash history.

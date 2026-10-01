@@ -38,3 +38,9 @@ Then open http://localhost:8080/login.html in a browser. The dashboard's API bas
 ## Status
 
 Backend API and web dashboard are functional and covered by manual end to end testing (login, vehicle and contact management, crash event lifecycle, sim heartbeat and low balance detection, alerts feed). The Android app and Arduino firmware are unchanged in this phase, see docs/INTEGRATION.md for how to connect them later.
+
+## Deployment, roles and security
+
+The API uses PostgreSQL in production (`DATABASE_URL`) and a local SQLite file for development. It has three admin
+roles (viewer, admin, super admin), an audit log, and sign in rate limits. See [docs/DEPLOY.md](docs/DEPLOY.md) for
+setup and [docs/API.md](docs/API.md) for the endpoints.
