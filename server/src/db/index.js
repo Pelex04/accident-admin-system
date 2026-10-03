@@ -133,6 +133,26 @@ const SCHEMA = [
     ip TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS device_keys (
+    vehicle_id TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    key_hash TEXT NOT NULL UNIQUE,
+    key_prefix TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    created_by TEXT,
+    last_used_at TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS device_event_ids (
+    vehicle_id TEXT NOT NULL,
+    client_event_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    PRIMARY KEY (vehicle_id, client_event_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS rate_limits (
+    key TEXT PRIMARY KEY,
+    hits INTEGER NOT NULL,
+    expires_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_rate_expires ON rate_limits (expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_events_vehicle ON crash_events (vehicle_id)`,
   `CREATE INDEX IF NOT EXISTS idx_events_detected ON crash_events (detected_at)`,
   `CREATE INDEX IF NOT EXISTS idx_contacts_vehicle ON contacts (vehicle_id)`,

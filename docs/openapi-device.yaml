@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: Accident Detection device API
+  version: 1.0.0
+  description: |
+    The API used by the phone or device in a vehicle. Each vehicle has its own device key, created in the dashboard
+    (Vehicles, open a vehicle, Device access). The key only works for that vehicle. See docs/MOBILE_APP_GUIDE.md.
+servers:
+  - url: https://your-server.example.com/api
+    description: Replace with the server address shown when the device key was created.
+security:
+  - DeviceKey: []
+tags:
+  - name: Device
+paths:
+  /health:
+    get:
+      summary: Is the server awake
+      description: No key needed. Use it to wake a sleeping server before important calls.
+      security: []
+      responses:
+        '200':
+          description: The server is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  time: { type: string, format: date-time }
+  /device/me:
+    get:
+      tags: [Device]
+      summary: This vehicle and its contacts
+      responses:
+        '200':
+          description: The vehicle the key belongs to
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vehicle: { $ref: '#/components/schemas/Vehicle' }
+                  contacts:
+                    type: array
+                    items: { $ref: '#/components/schemas/Contact' }
+                  settings:
+                    type: object
+                    properties:
+                      recommendedHeartbeatMinutes: { type: integer, example: 60 }
+                      staleAfterMinutes: { type: integer, example: 720 }
+                  serverTime: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /device/heartbeat:
+    post:
+      tags: [Device]
+      summary: Check in
+      description: Marks the device as alive. The body is optional.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                balanceText:
+                  type: string
+                  maxLength: 500
+                  description: Raw USSD or carrier text. The server detects low balance itself. Omit it when there is nothing new.
+      responses:
+        '200':
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+                  lowBalance: { type: boolean }
+                  serverTime: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /device/crash:
+    post:
+      tags: [Device]
+      summary: Report a crash
+      description: |
+        Safe to retry. Send a clientEventId and the same report sent twice returns the original with duplicate true.
+        Bad optional fields (location, time, notes) are dropped and listed in warnings, the report is still saved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrashCreate' }
+      responses:
+        '201':
+          description: New report saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrashResult' }
+        '200':
+          description: This clientEventId was already received. The original report is returned unchanged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrashResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /device/crash/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The server id of the report or the clientEventId the app used when creating it.
+        schema: { type: string }
+    get:
+      tags: [Device]
+      summary: One of this vehicle's reports
+      responses:
+        '200':
+          description: The report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event: { $ref: '#/components/schemas/Event' }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Device]
+      summary: Update one of this vehicle's reports
+      description: Send only the fields that change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrashUpdate' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  event: { $ref: '#/components/schemas/Event' }
+                  warnings:
+                    type: array
+                    items: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /device/crashes:
+    get:
+      tags: [Device]
+      summary: Recent reports for this vehicle
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/Event' }
+        '401': { $ref: '#/components/responses/InvalidKey' }
+components:
+  securitySchemes:
+    DeviceKey:
+      type: apiKey
+      in: header
+      name: X-Device-Key
+      description: The device key from the dashboard. It starts with dk_. Authorization Device dk_... is also accepted.
+  schemas:
+    Status:
+      type: string
+      enum: [detected, countdown, cancelled, alert_sent, alert_failed]
+    Vehicle:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [active, inactive] }
+    Contact:
+      type: object
+      properties:
+        id: { type: string }
+        vehicleId: { type: string }
+        name: { type: string }
+        phoneNumber: { type: string, example: '+265888333444' }
+        priority: { type: integer }
+    Event:
+      type: object
+      properties:
+        id: { type: string }
+        vehicleId: { type: string }
+        detectedAt: { type: string, format: date-time }
+        latitude: { type: number, nullable: true }
+        longitude: { type: number, nullable: true }
+        status: { $ref: '#/components/schemas/Status' }
+        cancelledBy: { type: string, nullable: true }
+        notes: { type: string }
+    CrashCreate:
+      type: object
+      properties:
+        clientEventId:
+          type: string
+          pattern: '^[A-Za-z0-9._:-]{1,64}$'
+          description: An id the app makes up, such as a UUID. Always send one.
+        status: { $ref: '#/components/schemas/Status' }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        detectedAt:
+          type: string
+          format: date-time
+          description: When the crash happened. Used if within the last 30 days, otherwise server time is used.
+        notes: { type: string, maxLength: 2000 }
+        cancelledBy: { type: string, maxLength: 120 }
+    CrashUpdate:
+      type: object
+      properties:
+        status: { $ref: '#/components/schemas/Status' }
+        cancelledBy: { type: string, maxLength: 120 }
+        notes: { type: string, maxLength: 2000 }
+        latitude: { type: number }
+        longitude: { type: number }
+    CrashResult:
+      type: object
+      properties:
+        event: { $ref: '#/components/schemas/Event' }
+        duplicate: { type: boolean }
+        warnings:
+          type: array
+          items: { type: string }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [invalid_request, invalid_device_key, not_found, rate_limited] }
+  responses:
+    InvalidKey:
+      description: Missing, wrong, regenerated or revoked device key
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: The request is invalid. The error text says what to fix.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No such report for this vehicle
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests. Wait the number of seconds in the Retry-After header.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

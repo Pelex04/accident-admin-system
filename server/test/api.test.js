@@ -248,6 +248,25 @@ test('repeated failed sign ins for one email are rate limited', async () => {
   assert.equal(statuses[9], 429);
 });
 
+test('rate limit counters live in the database, so a second server instance shares them', async () => {
+  const rows = await db.all("SELECT hits FROM rate_limits WHERE key LIKE 'login-email:ghost@test.local:%'");
+  assert.equal(rows.length, 1);
+  assert.ok(Number(rows[0].hits) >= 9);
+
+  const second = createApp().listen(0);
+  await once(second, 'listening');
+  try {
+    const res = await fetch('http://127.0.0.1:' + second.address().port + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'ghost@test.local', password: 'wrong-password-1' })
+    });
+    assert.equal(res.status, 429, 'the other instance already knows about the failed attempts');
+  } finally {
+    second.close();
+  }
+});
+
 test('super admin safeguards and session invalidation', async () => {
   assert.equal((await call('PUT', '/api/admins/' + ctx.rootId, { role: 'viewer' }, ctx.root)).status, 400);
   assert.equal((await call('DELETE', '/api/admins/' + ctx.rootId, undefined, ctx.root)).status, 400);

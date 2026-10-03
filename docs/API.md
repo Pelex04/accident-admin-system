@@ -72,6 +72,19 @@ Valid status values: detected, countdown, cancelled, alert_sent, alert_failed
 
 - GET /health - no auth required, returns { status: "ok", time }
 
+## Device API (for the app in the vehicle)
+
+Devices do not use admin logins. Each vehicle has a device key, sent as `X-Device-Key: dk_...`. Full guide for the app developer: [MOBILE_APP_GUIDE.md](MOBILE_APP_GUIDE.md). Spec: [openapi-device.yaml](openapi-device.yaml).
+
+- `GET /api/device/me`, `POST /api/device/heartbeat`, `POST /api/device/crash`, `PATCH /api/device/crash/:id`, `GET /api/device/crash/:id`, `GET /api/device/crashes`
+- Crash reports accept a `clientEventId` so retries never create copies, and bad optional fields are dropped with a `warnings` list instead of failing the report.
+
+Device keys are managed by admins and above:
+
+- `GET /api/vehicles/:id/device-key` returns `{ exists, prefix, createdAt, lastUsedAt }`. Any role can read it.
+- `POST /api/vehicles/:id/device-key` creates or replaces the key and returns `{ deviceKey, prefix, createdAt }`. The key is shown only this once. Only a fingerprint is stored.
+- `DELETE /api/vehicles/:id/device-key` revokes it.
+
 ## Roles, admins and audit log
 
 Every route except `/api/health` and `/api/auth/login` needs `Authorization: Bearer <token>`.

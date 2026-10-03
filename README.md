@@ -43,4 +43,5 @@ Backend API and web dashboard are functional and covered by manual end to end te
 
 The API uses PostgreSQL in production (`DATABASE_URL`) and a local SQLite file for development. It has three admin
 roles (viewer, admin, super admin), an audit log, and sign in rate limits. See [docs/DEPLOY.md](docs/DEPLOY.md) for
-setup and [docs/API.md](docs/API.md) for the endpoints.
+setup and [docs/API.md](docs/API.md) for the endpoints. The developer of the mobile app should start with
+[docs/MOBILE_APP_GUIDE.md](docs/MOBILE_APP_GUIDE.md).

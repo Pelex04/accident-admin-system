@@ -38,6 +38,7 @@ function createApp() {
   app.use('/api/events', require('./routes/events.routes'));
   app.use('/api/sim', require('./routes/sim.routes'));
   app.use('/api/alerts', require('./routes/alerts.routes'));
+  app.use('/api/device', require('./routes/device.routes'));
   app.use('/api/admins', require('./routes/admins.routes'));
   app.use('/api/audit', require('./routes/audit.routes'));
 

@@ -15,6 +15,7 @@ module.exports = {
   allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
   loginMaxPerIp: Number(process.env.LOGIN_MAX_PER_IP) || 30,
   loginMaxPerEmail: Number(process.env.LOGIN_MAX_PER_EMAIL) || 8,
+  deviceMaxPer10Min: Number(process.env.DEVICE_MAX_PER_10_MIN) || 240,
   lowBalanceKeywords: ['low balance', 'insufficient', 'expired', 'recharge now', 'top up'],
   heartbeatStaleMinutes: 60 * 12
 };

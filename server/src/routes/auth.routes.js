@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const config = require('../config');
 const { requireAuthAllowChange } = require('../middleware/auth');
-const { createLimiter } = require('../middleware/rateLimit');
+const { hit, reset, limit } = require('../middleware/rateLimit');
 const { wrap } = require('../utils/http');
 const { audit } = require('../utils/audit');
 const { admin: toAdmin } = require('../utils/serializers');
@@ -13,9 +13,13 @@ const { validatePassword } = require('../utils/passwords');
 const router = express.Router();
 
 const WINDOW = 15 * 60 * 1000;
-const ipLimiter = createLimiter({ windowMs: WINDOW, max: config.loginMaxPerIp });
-const emailLimiter = createLimiter({ windowMs: WINDOW, max: config.loginMaxPerEmail });
-const changeLimiter = createLimiter({ windowMs: WINDOW, max: 10 });
+const ipLimit = limit({
+  name: 'login-ip',
+  max: config.loginMaxPerIp,
+  windowMs: WINDOW,
+  key: (req) => req.ip,
+  message: 'Too many sign in attempts. Try again in a few minutes.'
+});
 // Compared against when the email is unknown, so timing does not reveal which emails exist.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
 
@@ -24,7 +28,7 @@ const sign = (row) =>
 
 router.post(
   '/login',
-  ipLimiter.middleware((req) => req.ip, 'Too many sign in attempts. Try again in a few minutes.'),
+  ipLimit,
   wrap(async (req, res) => {
     const email = String((req.body && req.body.email) || '').trim().toLowerCase();
     const password = String((req.body && req.body.password) || '').trim();
@@ -33,7 +37,7 @@ router.post(
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const gate = emailLimiter.take(email.slice(0, 254));
+    const gate = await hit('login-email', email.slice(0, 254), config.loginMaxPerEmail, WINDOW);
     if (!gate.ok) {
       res.set('Retry-After', String(gate.retryAfter));
       return res.status(429).json({ error: 'Too many failed attempts. Try again in a few minutes.' });
@@ -47,7 +51,7 @@ router.post(
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    emailLimiter.reset(email);
+    await reset('login-email', email.slice(0, 254), WINDOW);
     await db.run('UPDATE admin_users SET last_login_at = ? WHERE id = ?', [new Date().toISOString(), row.id]);
     await audit(req, 'auth.login', 'admin', row.id, 'Signed in', { id: row.id, email: row.email });
 
@@ -61,7 +65,7 @@ router.get('/me', requireAuthAllowChange, wrap(async (req, res) => {
 }));
 
 router.post('/change-password', requireAuthAllowChange, wrap(async (req, res) => {
-  const gate = changeLimiter.take(req.admin.id);
+  const gate = await hit('change-password', req.admin.id, 10, WINDOW);
   if (!gate.ok) {
     res.set('Retry-After', String(gate.retryAfter));
     return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });

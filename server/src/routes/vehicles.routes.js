@@ -6,6 +6,7 @@ const { wrap } = require('../utils/http');
 const { audit } = require('../utils/audit');
 const { vehicle: toVehicle, contact: toContact } = require('../utils/serializers');
 const { PHONE_RE, digits, validText } = require('../utils/validate');
+const { generateDeviceKey, hashDeviceKey, keyPrefix } = require('../utils/deviceKeys');
 
 const router = express.Router();
 router.use(requireAuth, requireWrite);
@@ -107,10 +108,50 @@ router.delete('/:id', wrap(async (req, res) => {
   await db.transaction(async (tx) => {
     await tx.run('DELETE FROM contacts WHERE vehicle_id = ?', [row.id]);
     await tx.run('DELETE FROM sim_statuses WHERE vehicle_id = ?', [row.id]);
+    await tx.run('DELETE FROM device_keys WHERE vehicle_id = ?', [row.id]);
+    await tx.run('DELETE FROM device_event_ids WHERE vehicle_id = ?', [row.id]);
     await tx.run('DELETE FROM vehicles WHERE id = ?', [row.id]);
   });
   await audit(req, 'vehicle.delete', 'vehicle', row.id, 'Deleted ' + row.name);
 
+  return res.status(204).send();
+}));
+
+// Device keys. The key itself is shown once, when it is created. Only its fingerprint is stored.
+router.get('/:id/device-key', wrap(async (req, res) => {
+  const vehicle = await db.get('SELECT id FROM vehicles WHERE id = ?', [req.params.id]);
+  if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+  const row = await db.get('SELECT key_prefix, created_at, last_used_at FROM device_keys WHERE vehicle_id = ?', [vehicle.id]);
+  return res.json(row ? { exists: true, prefix: row.key_prefix, createdAt: row.created_at, lastUsedAt: row.last_used_at } : { exists: false });
+}));
+
+router.post('/:id/device-key', wrap(async (req, res) => {
+  const vehicle = await db.get('SELECT id, name FROM vehicles WHERE id = ?', [req.params.id]);
+  if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+
+  const replacing = !!(await db.get('SELECT vehicle_id FROM device_keys WHERE vehicle_id = ?', [vehicle.id]));
+  const key = generateDeviceKey();
+  const createdAt = new Date().toISOString();
+
+  await db.transaction(async (tx) => {
+    await tx.run('DELETE FROM device_keys WHERE vehicle_id = ?', [vehicle.id]);
+    await tx.run(
+      'INSERT INTO device_keys (vehicle_id, key_hash, key_prefix, created_at, created_by) VALUES (?, ?, ?, ?, ?)',
+      [vehicle.id, hashDeviceKey(key), keyPrefix(key), createdAt, req.admin.email]
+    );
+  });
+  await audit(req, replacing ? 'device_key.regenerate' : 'device_key.create', 'vehicle', vehicle.id, (replacing ? 'Regenerated' : 'Created') + ' device key for ' + vehicle.name);
+
+  res.set('Cache-Control', 'no-store');
+  return res.status(201).json({ deviceKey: key, prefix: keyPrefix(key), createdAt });
+}));
+
+router.delete('/:id/device-key', wrap(async (req, res) => {
+  const vehicle = await db.get('SELECT id, name FROM vehicles WHERE id = ?', [req.params.id]);
+  if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+  const result = await db.run('DELETE FROM device_keys WHERE vehicle_id = ?', [vehicle.id]);
+  if (!result.changes) return res.status(404).json({ error: 'This vehicle has no device key' });
+  await audit(req, 'device_key.revoke', 'vehicle', vehicle.id, 'Revoked device key for ' + vehicle.name);
   return res.status(204).send();
 }));
 

@@ -99,6 +99,10 @@ const api = {
 
   getAlerts: () => apiRequest("/alerts"),
 
+  getDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key"),
+  createDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key", { method: "POST", body: {} }),
+  revokeDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key", { method: "DELETE" }),
+
   me: () => apiRequest("/auth/me"),
   changePassword: (currentPassword, newPassword) =>
     apiRequest("/auth/change-password", { method: "POST", body: { currentPassword, newPassword } }),

@@ -50,7 +50,13 @@ password takes effect immediately and ends that person's current sessions.
 - New passwords need at least 10 characters with letters and a number.
 - The API trusts one proxy hop for the client address, which matches Render and most similar hosts.
 
-## 6. Tests
+## 6. Devices and the mobile app
+
+The app in each vehicle uses a per-vehicle device key, not an admin login. Create it in the dashboard (Vehicles, open the vehicle, Device access) and enter the server address and key in the app. Give the developer [MOBILE_APP_GUIDE.md](MOBILE_APP_GUIDE.md). A device may make about 240 requests per 10 minutes (`DEVICE_MAX_PER_10_MIN` changes it).
+
+Sign in and device request limits are counted in the database, so they are shared by every server instance and survive restarts.
+
+## 7. Tests
 
 `npm test` in `server/` runs the API tests against SQLite. To run them against PostgreSQL, give each test file its own
 empty database:

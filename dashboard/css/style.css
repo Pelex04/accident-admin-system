@@ -643,5 +643,6 @@ textarea { min-height: 84px; resize: vertical; }
 .role-viewer [data-vehicle-id],
 .role-viewer #saveNotes,
 .role-viewer #toggleStatus,
-.role-viewer #toppedUp { display: none !important; }
+.role-viewer #toppedUp,
+.role-viewer #keyActions { display: none !important; }
 .role-viewer .data-table td .dd, .role-viewer #statusSelect + .dd { pointer-events: none; opacity: 0.7; }
