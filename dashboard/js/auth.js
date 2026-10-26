@@ -15,7 +15,7 @@ const reason = params.get("reason");
 
 // Already signed in: skip the form.
 if (getToken() && !reason) {
-  window.location.replace("index.html");
+  window.location.replace(homePage());
 }
 
 // Notice after being sent back here, then tidy the address bar.
@@ -129,7 +129,7 @@ form.addEventListener("submit", async (event) => {
     loginButton.textContent = "Signed in";
     trace.classList.add("ok");
     await delay(reduceMotion ? 0 : 750);
-    window.location.href = result.admin.mustChangePassword ? "change-password.html?forced=1" : "index.html";
+    window.location.href = result.admin.mustChangePassword ? "change-password.html?forced=1" : homePage();
   } catch (err) {
     const offline = err instanceof TypeError;
     errorText.textContent = offline

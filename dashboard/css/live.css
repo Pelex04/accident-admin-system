@@ -1,0 +1,59 @@
+/* Live board. Plain CSS, no images, nothing that needs the network. */
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.conn { padding: 10px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+.conn.ok { background: var(--ok-dim); color: #11713f; }
+.conn.warn { background: var(--warning-dim); color: #8a5a07; }
+.conn.bad { background: var(--danger-dim); color: #b3242a; }
+
+.board-heading { margin: 24px 0 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.board-heading:first-child { margin-top: 0; }
+.board-empty { padding: 28px 16px; text-align: center; color: var(--text-muted); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+
+.inc { background: var(--panel); border: 1px solid var(--border); border-left-width: 6px; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+.inc-banner { padding: 9px 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.inc-body { padding: 14px 16px 16px; display: grid; gap: 12px; }
+
+.tone-confirmed { border-left-color: var(--danger); }
+.tone-confirmed .inc-banner { background: var(--danger); color: #fff; }
+.tone-failed { border-left-color: #8e1b20; }
+.tone-failed .inc-banner { background: #8e1b20; color: #fff; }
+.tone-possible { border-left-color: var(--warning); }
+.tone-possible .inc-banner { background: var(--warning); color: #3d2700; }
+.tone-cancelled { border-left-color: var(--text-faint); opacity: 0.85; }
+.tone-cancelled .inc-banner { background: var(--page-bg); color: var(--text-muted); }
+.inc.handled { border-left-color: var(--ok); }
+.inc.handled .inc-banner { background: var(--ok-dim); color: #11713f; }
+
+.inc-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.inc-ref { font-family: var(--font-mono); font-size: 30px; font-weight: 500; letter-spacing: 0.08em; padding: 2px 12px; border: 2px solid var(--text); border-radius: 8px; }
+.inc-vehicle { font-size: 20px; font-weight: 700; }
+.inc-time { font-size: 14px; color: var(--text-muted); }
+
+.inc-loc { font-size: 15px; }
+.inc-loc .mono { margin-right: 10px; }
+.inc-loc.missing { color: #8a5a07; font-weight: 500; }
+
+.inc-deliveries { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.inc-deliveries li { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; font-size: 14px; }
+.inc-deliveries .who { font-weight: 600; min-width: 130px; }
+.d-delivered { color: #11713f; font-weight: 600; }
+.d-sent { color: var(--text); }
+.d-pending { color: var(--text-muted); }
+.d-failed { color: #b3242a; font-weight: 700; }
+.inc-nodelivery { font-size: 14px; color: var(--text-muted); }
+
+.inc-notes { font-size: 14px; color: var(--text-muted); }
+.inc-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.inc-actions .btn { min-height: 44px; padding-left: 22px; padding-right: 22px; font-size: 15px; }
+.inc-handled { font-size: 14px; font-weight: 600; color: #11713f; }
+
+@media (max-width: 600px) {
+  .inc-ref { font-size: 26px; }
+  .inc-actions .btn { width: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tone-confirmed .inc-banner, .tone-failed .inc-banner { animation: bannerPulse 1.6s ease-in-out infinite; }
+}
+@keyframes bannerPulse { 50% { filter: brightness(1.18); } }

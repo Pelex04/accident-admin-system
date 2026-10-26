@@ -7,6 +7,7 @@ const { wrap } = require('../utils/http');
 const { audit } = require('../utils/audit');
 const { event: toEvent, contact: toContact } = require('../utils/serializers');
 const { recordHeartbeat } = require('../utils/heartbeat');
+const { ROLES, DELIVERY_STATUSES, DELIVERY_RANK, makeRef, validRef, touch } = require('../utils/incidents');
 
 // The API for the phone or device in a vehicle. Every route here belongs to the one vehicle the key was
 // created for. A device can report and update its own crash reports and check in, and nothing else.
@@ -63,6 +64,35 @@ async function findOwn(req, key) {
     if (mapped) row = await db.get('SELECT * FROM crash_events WHERE id = ?', [mapped.event_id]);
   }
   return row;
+}
+
+// Who the phone texted and whether it got through. Bad entries are dropped with a warning, like the other
+// optional fields, so a crash update is never refused over one odd line.
+async function saveDeliveries(eventId, input, warnings) {
+  if (input === undefined || input === null) return 0;
+  if (!Array.isArray(input)) {
+    warnings.push('deliveries ignored: must be a list');
+    return 0;
+  }
+  let saved = 0;
+  for (const item of input.slice(0, 20)) {
+    const phone = item && typeof item.phoneNumber === 'string' ? item.phoneNumber.trim() : '';
+    if (!item || !ROLES.includes(item.role) || !DELIVERY_STATUSES.includes(item.status) || !phone || phone.length > 32) {
+      warnings.push('a delivery entry was ignored: it needs role, phoneNumber and status');
+      continue;
+    }
+    const now = new Date().toISOString();
+    const existing = await db.get('SELECT id, status FROM alert_deliveries WHERE event_id = ? AND phone_number = ?', [eventId, phone]);
+    if (!existing) {
+      await db.run('INSERT INTO alert_deliveries (id, event_id, role, phone_number, status, updated_at) VALUES (?, ?, ?, ?, ?, ?)', [uuidv4(), eventId, item.role, phone, item.status, now]);
+      saved++;
+    } else if (DELIVERY_RANK[item.status] >= DELIVERY_RANK[existing.status]) {
+      await db.run('UPDATE alert_deliveries SET role = ?, status = ?, updated_at = ? WHERE id = ?', [item.role, item.status, now, existing.id]);
+      saved++;
+    }
+  }
+  if (input.length > 20) warnings.push('only the first 20 deliveries were used');
+  return saved;
 }
 
 router.get('/me', wrap(async (req, res) => {
@@ -126,14 +156,17 @@ router.post('/crash', wrap(async (req, res) => {
     longitude: lon === undefined ? null : lon,
     status: status || 'detected',
     cancelled_by: body.cancelledBy || null,
-    notes: notes || ''
+    notes: notes || '',
+    // The phone makes the code so it can put it in the SMS even when it cannot reach this server.
+    ref: validRef(body.ref) ? body.ref : makeRef()
   };
+  if (body.ref !== undefined && body.ref !== null && !validRef(body.ref)) warnings.push('ref ignored: use 4 to 6 letters and digits (no 0, 1, I or O). The server made one');
 
   try {
     await db.transaction(async (tx) => {
       await tx.run(
-        'INSERT INTO crash_events (id, vehicle_id, detected_at, latitude, longitude, status, cancelled_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [event.id, event.vehicle_id, event.detected_at, event.latitude, event.longitude, event.status, event.cancelled_by, event.notes]
+        'INSERT INTO crash_events (id, vehicle_id, detected_at, latitude, longitude, status, cancelled_by, notes, ref, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [event.id, event.vehicle_id, event.detected_at, event.latitude, event.longitude, event.status, event.cancelled_by, event.notes, event.ref, new Date().toISOString()]
       );
       if (clientEventId) {
         await tx.run('INSERT INTO device_event_ids (vehicle_id, client_event_id, event_id) VALUES (?, ?, ?)', [event.vehicle_id, clientEventId, event.id]);
@@ -148,7 +181,8 @@ router.post('/crash', wrap(async (req, res) => {
   }
 
   await audit(req, 'event.create', 'event', event.id, 'Crash reported by device for ' + req.device.vehicleName, actor(req));
-  return res.status(201).json({ event: toEvent(event), duplicate: false, warnings });
+  await touch(event.id);
+  return res.status(201).json({ event: toEvent(await db.get('SELECT * FROM crash_events WHERE id = ?', [event.id])), duplicate: false, warnings });
 }));
 
 router.patch('/crash/:id', wrap(async (req, res) => {
@@ -178,7 +212,9 @@ router.patch('/crash/:id', wrap(async (req, res) => {
       row.id
     ]
   );
-  await audit(req, 'event.update', 'event', row.id, 'Crash update from device' + (nextStatus !== row.status ? ': status ' + row.status + ' to ' + nextStatus : ''), actor(req));
+  const deliveryCount = await saveDeliveries(row.id, body.deliveries, warnings);
+  await audit(req, 'event.update', 'event', row.id, 'Crash update from device' + (nextStatus !== row.status ? ': status ' + row.status + ' to ' + nextStatus : '') + (deliveryCount ? ', ' + deliveryCount + ' delivery update(s)' : ''), actor(req));
+  await touch(row.id);
 
   return res.json({ event: toEvent(await db.get('SELECT * FROM crash_events WHERE id = ?', [row.id])), warnings });
 }));

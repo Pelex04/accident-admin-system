@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../db');
 
-const RANK = { viewer: 1, admin: 2, super_admin: 3 };
+// dispatcher: read only like a viewer, plus can acknowledge crashes on the live board.
+const RANK = { viewer: 1, dispatcher: 2, admin: 3, super_admin: 4 };
 
 // Loads the admin from the database on every request, so a disabled account, a changed role or a
 // reset password takes effect immediately instead of when the token expires.
@@ -33,6 +34,7 @@ function auth(options) {
       }
 
       req.admin = { id: row.id, email: row.email, role: row.role, mustChangePassword: !!Number(row.must_change_password) };
+      req.tokenVersion = row.token_version;
 
       if (req.admin.mustChangePassword && !allowPasswordChange) {
         return res.status(403).json({ error: 'You must change your password before continuing', code: 'password_change_required' });

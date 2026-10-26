@@ -3,7 +3,7 @@ const num = (v) => (v === null || v === undefined ? null : Number(v));
 
 exports.vehicle = (r) => ({ id: r.id, name: r.name, arduinoSimNumber: r.arduino_sim_number, status: r.status, registeredAt: r.registered_at });
 
-exports.contact = (r) => ({ id: r.id, vehicleId: r.vehicle_id, name: r.name, phoneNumber: r.phone_number, priority: Number(r.priority) });
+exports.contact = (r) => ({ id: r.id, vehicleId: r.vehicle_id, name: r.name, phoneNumber: r.phone_number, priority: Number(r.priority), role: r.role || 'next_of_kin' });
 
 exports.event = (r) => ({
   id: r.id,
@@ -13,7 +13,11 @@ exports.event = (r) => ({
   longitude: num(r.longitude),
   status: r.status,
   cancelledBy: r.cancelled_by === undefined ? null : r.cancelled_by,
-  notes: r.notes
+  notes: r.notes,
+  ref: r.ref || null,
+  updatedAt: r.updated_at || null,
+  acknowledgedAt: r.acknowledged_at || null,
+  acknowledgedBy: r.acknowledged_by || null
 });
 
 exports.sim = (r) => ({

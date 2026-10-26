@@ -70,6 +70,11 @@ async function apiRequest(path, options) {
   return data;
 }
 
+// Dispatchers work from the live board, so that is where they land after signing in.
+function homePage() {
+  return localStorage.getItem("adminRole") === "dispatcher" ? "live.html" : "index.html";
+}
+
 const api = {
   login: (email, password) =>
     apiRequest("/auth/login", { method: "POST", body: { email, password } }),
@@ -98,6 +103,9 @@ const api = {
   markToppedUp: (vehicleId) => apiRequest("/sim/" + vehicleId + "/mark-topped-up", { method: "POST" }),
 
   getAlerts: () => apiRequest("/alerts"),
+
+  getLive: () => apiRequest("/live"),
+  ackIncident: (id) => apiRequest("/live/" + id + "/ack", { method: "POST", body: {} }),
 
   getDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key"),
   createDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key", { method: "POST", body: {} }),

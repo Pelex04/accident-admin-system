@@ -77,6 +77,10 @@ function attachRowHandlers() {
   });
 }
 
+function roleLabel(role) {
+  return role === "dispatcher" ? "Medical dispatcher" : "Next of kin";
+}
+
 async function showContacts(vehicleId, vehicleName) {
   selectedVehicleId = vehicleId;
   document.getElementById("contactsSection").style.display = "block";
@@ -96,7 +100,7 @@ async function loadContacts() {
     const contacts = await api.getVehicleContacts(selectedVehicleId);
 
     if (contacts.length === 0) {
-      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">No contacts yet.</td></tr>";
+      tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"5\">No contacts yet.</td></tr>";
       return;
     }
 
@@ -107,6 +111,7 @@ async function loadContacts() {
           "<td>" + esc(contact.name) + "</td>" +
           "<td class=\"mono\">" + esc(contact.phoneNumber) + "</td>" +
           "<td>" + esc(contact.priority) + "</td>" +
+          "<td>" + esc(roleLabel(contact.role)) + "</td>" +
           "<td><button class=\"btn danger\" data-contact-id=\"" + esc(contact.id) + "\">Remove</button></td>" +
           "</tr>"
       )
@@ -120,7 +125,7 @@ async function loadContacts() {
       });
     });
   } catch (err) {
-    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"4\">Could not load contacts: " + esc(err.message) + "</td></tr>";
+    tableBody.innerHTML = "<tr class=\"empty-row\"><td colspan=\"5\">Could not load contacts: " + esc(err.message) + "</td></tr>";
   }
 }
 
@@ -159,7 +164,7 @@ document.getElementById("addContactButton").addEventListener("click", async () =
   }
 
   try {
-    await api.addVehicleContact(selectedVehicleId, { name, phoneNumber });
+    await api.addVehicleContact(selectedVehicleId, { name, phoneNumber, role: document.getElementById("contactRole").value });
     document.getElementById("contactName").value = "";
     document.getElementById("contactPhone").value = "";
     loadContacts();

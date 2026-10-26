@@ -77,6 +77,8 @@ function makeSqlite() {
 
 const driver = dialect === 'postgres' ? makePostgres() : makeSqlite();
 
+const SEQ_COLUMN = dialect === 'postgres' ? 'BIGSERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS admin_users (
     id TEXT PRIMARY KEY,
@@ -152,6 +154,24 @@ const SCHEMA = [
     hits INTEGER NOT NULL,
     expires_at TEXT NOT NULL
   )`,
+  // Who was told about a crash and whether the message got through (one row per recipient number).
+  `CREATE TABLE IF NOT EXISTS alert_deliveries (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    status TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (event_id, phone_number)
+  )`,
+  // Append-only list of "this crash changed". The live dashboard stream reads it, so a screen that
+  // lost its connection can catch up on what it missed instead of silently showing old data.
+  `CREATE TABLE IF NOT EXISTS change_log (
+    seq ${SEQ_COLUMN},
+    at TEXT NOT NULL,
+    event_id TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_deliveries_event ON alert_deliveries (event_id)`,
   `CREATE INDEX IF NOT EXISTS idx_rate_expires ON rate_limits (expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_events_vehicle ON crash_events (vehicle_id)`,
   `CREATE INDEX IF NOT EXISTS idx_events_detected ON crash_events (detected_at)`,
@@ -169,9 +189,24 @@ const db = {
 
   async init() {
     for (const statement of SCHEMA) await driver.exec(statement);
+    // Columns added after the first release. Safe to run on every start.
+    await addColumn('contacts', 'role', "TEXT NOT NULL DEFAULT 'next_of_kin'");
+    await addColumn('crash_events', 'ref', 'TEXT');
+    await addColumn('crash_events', 'updated_at', 'TEXT');
+    await addColumn('crash_events', 'acknowledged_at', 'TEXT');
+    await addColumn('crash_events', 'acknowledged_by', 'TEXT');
     await importLegacyJson();
   }
 };
+
+async function addColumn(table, column, definition) {
+  if (dialect === 'postgres') {
+    await driver.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
+    return;
+  }
+  const columns = await driver.all(`PRAGMA table_info(${table})`);
+  if (!columns.some((c) => c.name === column)) await driver.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
 
 // One time import of the old data/db.json file (used before the database existed).
 async function importLegacyJson() {

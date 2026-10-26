@@ -2,7 +2,7 @@ requireAuthOrRedirect();
 renderSidebar("admins");
 
 const byId = (id) => document.getElementById(id);
-const ROLES = [["viewer", "Viewer"], ["admin", "Admin"], ["super_admin", "Super admin"]];
+const ROLES = [["viewer", "Viewer"], ["dispatcher", "Dispatcher"], ["admin", "Admin"], ["super_admin", "Super admin"]];
 const roleLabel = (role) => (ROLES.find((r) => r[0] === role) || [role, role])[1];
 let me = null;
 

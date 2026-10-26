@@ -70,6 +70,7 @@
                 <th>Name</th>
                 <th>Phone number</th>
                 <th data-filter>Priority</th>
+                <th data-filter>Role</th>
                 <th></th>
               </tr>
             </thead>
@@ -82,6 +83,13 @@
           <div class="form-row">
             <label for="contactPhone">New contact phone number</label>
             <input type="text" id="contactPhone" placeholder="+265888111222">
+          </div>
+          <div class="form-row">
+            <label for="contactRole">Role</label>
+            <select id="contactRole">
+              <option value="next_of_kin">Next of kin</option>
+              <option value="dispatcher">Medical dispatcher</option>
+            </select>
           </div>
           <div class="error-text" id="contactError"></div>
           <button class="btn" id="addContactButton">Add contact</button>

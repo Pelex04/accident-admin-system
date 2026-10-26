@@ -1,4 +1,5 @@
 const express = require('express');
+const { ROLES } = require('../utils/incidents');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db');
 const { requireAuth, requireWrite } = require('../middleware/auth');
@@ -164,7 +165,7 @@ router.post('/:id/contacts', wrap(async (req, res) => {
   const vehicle = await db.get('SELECT id, name FROM vehicles WHERE id = ?', [req.params.id]);
   if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
-  const { name, phoneNumber, priority } = req.body || {};
+  const { name, phoneNumber, priority, role } = req.body || {};
 
   if (!name || !phoneNumber) {
     return res.status(400).json({ error: 'name and phoneNumber are required' });
@@ -180,9 +181,13 @@ router.post('/:id/contacts', wrap(async (req, res) => {
     return res.status(400).json({ error: 'priority must be a whole number from 1 to 99' });
   }
 
-  const contact = { id: uuidv4(), vehicle_id: vehicle.id, name: name.trim(), phone_number: String(phoneNumber).trim(), priority: level };
-  await db.run('INSERT INTO contacts (id, vehicle_id, name, phone_number, priority) VALUES (?, ?, ?, ?, ?)',
-    [contact.id, contact.vehicle_id, contact.name, contact.phone_number, contact.priority]);
+  if (role !== undefined && !ROLES.includes(role)) {
+    return res.status(400).json({ error: 'role must be next_of_kin or dispatcher' });
+  }
+
+  const contact = { id: uuidv4(), vehicle_id: vehicle.id, name: name.trim(), phone_number: String(phoneNumber).trim(), priority: level, role: role || 'next_of_kin' };
+  await db.run('INSERT INTO contacts (id, vehicle_id, name, phone_number, priority, role) VALUES (?, ?, ?, ?, ?, ?)',
+    [contact.id, contact.vehicle_id, contact.name, contact.phone_number, contact.priority, contact.role]);
   await audit(req, 'contact.create', 'contact', contact.id, 'Added ' + contact.name + ' to ' + vehicle.name);
 
   return res.status(201).json(toContact(contact));

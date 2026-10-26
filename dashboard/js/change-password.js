@@ -33,7 +33,7 @@ byId("pwForm").addEventListener("submit", async (event) => {
     setToken(result.token);
     localStorage.setItem("adminRole", result.admin.role);
     button.textContent = "Saved";
-    window.location.href = "index.html";
+    window.location.href = homePage();
   } catch (err) {
     error.textContent = err.message;
     button.disabled = false;

@@ -80,8 +80,8 @@ async function loadVehicle() {
       (keyInfo && keyInfo.exists ? ' <button type="button" class="btn danger" id="revokeKey">Revoke key</button>' : "");
 
     byId("contactsBody").innerHTML = contacts.length
-      ? contacts.map((c) => "<tr><td>" + esc(c.name) + '</td><td class="mono">' + esc(c.phoneNumber) + "</td><td>" + esc(c.priority) + "</td></tr>").join("")
-      : '<tr class="empty-row"><td colspan="3">No emergency contacts yet.</td></tr>';
+      ? contacts.map((c) => "<tr><td>" + esc(c.name) + '</td><td class="mono">' + esc(c.phoneNumber) + "</td><td>" + esc(c.priority) + "</td><td>" + (c.role === "dispatcher" ? "Medical dispatcher" : "Next of kin") + "</td></tr>").join("")
+      : '<tr class="empty-row"><td colspan="4">No emergency contacts yet.</td></tr>';
 
     byId("historyBody").innerHTML = events.length
       ? events.map((e) =>

@@ -12,7 +12,7 @@ const { validatePassword, generateTempPassword } = require('../utils/passwords')
 const router = express.Router();
 router.use(requireAuth, requireRole('super_admin'));
 
-const ROLES = ['viewer', 'admin', 'super_admin'];
+const ROLES = ['viewer', 'dispatcher', 'admin', 'super_admin'];
 
 router.get('/', wrap(async (req, res) => {
   const rows = await db.all('SELECT * FROM admin_users ORDER BY created_at, email');
@@ -25,7 +25,7 @@ router.post('/', wrap(async (req, res) => {
   const supplied = req.body && req.body.password ? String(req.body.password).trim() : null;
 
   if (!EMAIL_RE.test(email) || email.length > 254) return res.status(400).json({ error: 'A valid email is required' });
-  if (!ROLES.includes(role)) return res.status(400).json({ error: 'role must be viewer, admin or super_admin' });
+  if (!ROLES.includes(role)) return res.status(400).json({ error: 'role must be viewer, dispatcher, admin or super_admin' });
   if (await db.get('SELECT id FROM admin_users WHERE email = ?', [email])) {
     return res.status(409).json({ error: 'An admin with that email already exists' });
   }
@@ -57,7 +57,7 @@ router.put('/:id', wrap(async (req, res) => {
   }
 
   const { role, active } = req.body || {};
-  if (role !== undefined && !ROLES.includes(role)) return res.status(400).json({ error: 'role must be viewer, admin or super_admin' });
+  if (role !== undefined && !ROLES.includes(role)) return res.status(400).json({ error: 'role must be viewer, dispatcher, admin or super_admin' });
   if (active !== undefined && typeof active !== 'boolean') return res.status(400).json({ error: 'active must be true or false' });
 
   const nextRole = role !== undefined ? role : target.role;

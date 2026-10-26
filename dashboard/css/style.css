@@ -646,3 +646,18 @@ textarea { min-height: 84px; resize: vertical; }
 .role-viewer #toppedUp,
 .role-viewer #keyActions { display: none !important; }
 .role-viewer .data-table td .dd, .role-viewer #statusSelect + .dd { pointer-events: none; opacity: 0.7; }
+
+/* Dispatchers can watch and acknowledge but not change records, same as viewers */
+.role-dispatcher .card:has(#addVehicleButton),
+.role-dispatcher .card:has(#addContactButton),
+.role-dispatcher #importVehicles,
+.role-dispatcher .actions-cell .btn:not([data-action="contacts"]),
+.role-dispatcher .bulkbar,
+.role-dispatcher .bulk-check,
+.role-dispatcher .bulk-all,
+.role-dispatcher [data-vehicle-id],
+.role-dispatcher #saveNotes,
+.role-dispatcher #toggleStatus,
+.role-dispatcher #toppedUp,
+.role-dispatcher #keyActions { display: none !important; }
+.role-dispatcher .data-table td .dd, .role-dispatcher #statusSelect + .dd { pointer-events: none; opacity: 0.7; }

@@ -1,4 +1,5 @@
 const NAV_ITEMS = [
+  { key: "live", label: "Live board", href: "live.html" },
   { key: "overview", label: "Overview", href: "index.html" },
   { key: "vehicles", label: "Vehicles", href: "vehicles.html" },
   { key: "events", label: "Crash events", href: "events.html" },
@@ -118,7 +119,8 @@ function renderSidebar(activePage) {
     window.location.href = "login.html?reason=signedout";
   });
 
-  startLive();
+  // The live board keeps its own connection and updates this indicator itself.
+  if (activePage !== "live") startLive();
 }
 
 // Polls for crash changes. Pages set window.onLiveUpdate to reload their own data.

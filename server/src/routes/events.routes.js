@@ -6,6 +6,7 @@ const { wrap } = require('../utils/http');
 const { audit } = require('../utils/audit');
 const { event: toEvent } = require('../utils/serializers');
 const { validCoord } = require('../utils/validate');
+const { makeRef, touch } = require('../utils/incidents');
 
 const router = express.Router();
 router.use(requireAuth, requireWrite);
@@ -59,16 +60,18 @@ router.post('/', wrap(async (req, res) => {
     longitude: lon,
     status: VALID_STATUSES.includes(status) ? status : 'detected',
     cancelled_by: null,
-    notes: notes || ''
+    notes: notes || '',
+    ref: makeRef()
   };
 
   await db.run(
-    'INSERT INTO crash_events (id, vehicle_id, detected_at, latitude, longitude, status, cancelled_by, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [event.id, event.vehicle_id, event.detected_at, event.latitude, event.longitude, event.status, event.cancelled_by, event.notes]
+    'INSERT INTO crash_events (id, vehicle_id, detected_at, latitude, longitude, status, cancelled_by, notes, ref, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [event.id, event.vehicle_id, event.detected_at, event.latitude, event.longitude, event.status, event.cancelled_by, event.notes, event.ref, new Date().toISOString()]
   );
   await audit(req, 'event.create', 'event', event.id, 'Crash reported for ' + vehicle.name);
+  await touch(event.id);
 
-  return res.status(201).json(toEvent(event));
+  return res.status(201).json(toEvent(await db.get('SELECT * FROM crash_events WHERE id = ?', [event.id])));
 }));
 
 router.put('/:id', wrap(async (req, res) => {
@@ -108,6 +111,7 @@ router.put('/:id', wrap(async (req, res) => {
   if (cancelledBy !== undefined && cancelledBy !== row.cancelled_by) changed.push('cancelled by');
   if (latitude !== undefined || longitude !== undefined) changed.push('location');
   await audit(req, 'event.update', 'event', row.id, 'Crash event: changed ' + (changed.join(', ') || 'nothing'));
+  await touch(row.id);
 
   return res.json(toEvent(await db.get('SELECT * FROM crash_events WHERE id = ?', [row.id])));
 }));
