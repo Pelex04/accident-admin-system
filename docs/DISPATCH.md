@@ -15,7 +15,7 @@ The server never needs to receive the SMS itself. The phone reports which messag
 
 **Contacts** now have a `role`: `next_of_kin` (default) or `dispatcher`. Set it in the dashboard (Vehicles, Contacts) or through the API. The phone reads it from `GET /api/device/me` and sends a short factual message to dispatchers and a personal one to next of kin.
 
-**Admin accounts** have a new role, `dispatcher`. It can read everything a viewer can and can acknowledge crashes. It cannot change records. Dispatchers land on the live board after signing in.
+**Admin accounts** have a new role, `dispatcher`. It can read everything a viewer can and is the only role that can acknowledge crashes. It cannot change records. Admins and super admins watch the board but cannot acknowledge, so "acknowledged by" always names a dispatcher. Dispatchers land on the live board after signing in.
 
 ## Reference code
 
@@ -43,7 +43,7 @@ Every crash has a short `ref` (for example `K7Q2`), made of letters and digits w
 |---|---|---|
 | GET | `/api/live` | Crashes from the last 24 hours (`?hours=1..168`), each with `vehicleName` and `deliveries`, plus `seq` (stream position). |
 | GET | `/api/live/stream` | Server-Sent Events. Send `Authorization: Bearer ...` and, on reconnect, `Last-Event-ID`. |
-| POST | `/api/live/:id/ack` | Dispatcher, admin or super admin. First acknowledgement stands. |
+| POST | `/api/live/:id/ack` | Dispatcher accounts only (admins get 403). First acknowledgement stands. |
 
 Stream messages: `hello` (position), `incident` (full crash, sent on every change, `id` is the position), `reset` (the stored position is from a wiped database, reload with `GET /api/live`). A comment line `: ping` arrives every 20 seconds. A screen that reconnects with its last id receives everything it missed. One account can hold 5 streams at once.
 

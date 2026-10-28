@@ -163,20 +163,22 @@ test('delivery results are stored, never go backwards, and bad lines are dropped
   assert.deepEqual(byRole, { dispatcher: 'delivered', next_of_kin: 'failed' });
 });
 
-test('acknowledge: dispatchers and above can, viewers cannot, and it only counts once', async () => {
+test('acknowledge: only dispatcher accounts can, admins and viewers only watch, and it only counts once', async () => {
   const board = await call('GET', '/api/live', undefined, admin(ctx.viewer));
   assert.equal(board.status, 200, 'viewers can watch the board');
   const id = board.body.incidents.find((i) => i.ref === 'D3L9').id;
 
   assert.equal((await call('POST', `/api/live/${id}/ack`, {}, admin(ctx.viewer))).status, 403);
+  assert.equal((await call('POST', `/api/live/${id}/ack`, {}, admin(ctx.root))).status, 403, 'a super admin watches, does not acknowledge');
+  assert.equal((await call('GET', '/api/live', undefined, admin(ctx.root))).status, 200, 'but can see the board');
   assert.equal((await call('POST', '/api/live/nope/ack', {}, admin(ctx.dispatcher))).status, 404);
   assert.equal((await call('POST', `/api/live/${id}/ack`, {})).status, 401);
 
   const first = await call('POST', `/api/live/${id}/ack`, {}, admin(ctx.dispatcher));
   assert.equal(first.status, 200);
   assert.equal(first.body.acknowledgedBy, 'dispatch@test.local');
-  const second = await call('POST', `/api/live/${id}/ack`, {}, admin(ctx.root));
-  assert.equal(second.body.acknowledgedBy, 'dispatch@test.local', 'the first acknowledgement stands');
+  const second = await call('POST', `/api/live/${id}/ack`, {}, admin(ctx.dispatcher));
+  assert.equal(second.body.acknowledgedBy, 'dispatch@test.local', 'a repeat changes nothing');
 });
 
 test('a dispatcher is read only apart from acknowledging', async () => {

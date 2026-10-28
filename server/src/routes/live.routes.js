@@ -1,6 +1,13 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
+
+// Only dispatcher accounts acknowledge. Admins and super admins watch the board but do not take crashes,
+// so "acknowledged by" always names someone whose job it is to respond.
+const onlyDispatchers = (req, res, next) =>
+  req.admin.role === 'dispatcher'
+    ? next()
+    : res.status(403).json({ error: 'Only dispatcher accounts can acknowledge a crash', code: 'forbidden' });
 const { wrap } = require('../utils/http');
 const { audit } = require('../utils/audit');
 const { bus, touch, latestSeq, recentIncidents, incidentsByIds } = require('../utils/incidents');
@@ -25,7 +32,7 @@ router.get('/', wrap(async (req, res) => {
 }));
 
 // A dispatcher taps Acknowledge so everyone watching the board knows someone has taken it.
-router.post('/:id/ack', requireRole('dispatcher'), wrap(async (req, res) => {
+router.post('/:id/ack', onlyDispatchers, wrap(async (req, res) => {
   const row = await db.get('SELECT * FROM crash_events WHERE id = ?', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Crash event not found' });
   if (row.acknowledged_at) return res.json((await incidentsByIds([row.id]))[0]);

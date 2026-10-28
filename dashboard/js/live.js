@@ -6,7 +6,8 @@ renderSidebar("live");
 // by itself, asks for everything it missed, and checks the full list on a timer as a safety net.
 
 const STREAM_URL = API_BASE_URL + "/live/stream";
-const CAN_ACK = (localStorage.getItem("adminRole") || "viewer") !== "viewer";
+// Only dispatcher accounts acknowledge. Everyone else watches.
+const CAN_ACK = localStorage.getItem("adminRole") === "dispatcher";
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const incidents = new Map();
@@ -104,10 +105,13 @@ soundButton.addEventListener("click", (event) => {
 // Browsers only allow sound after a click on the page, so any click starts it again after a reload.
 document.addEventListener("click", () => { if (soundOn) { unlockAudio(); showSoundState(); } });
 
-// Keep sounding until someone acknowledges.
-setInterval(() => {
-  if (Array.from(incidents.values()).some((i) => isRecent(i) && needsAttention(i))) beep(3, 880);
-}, 12000);
+// Dispatchers keep hearing it until someone acknowledges. Admins and viewers cannot acknowledge, so for them
+// it sounds once when a crash arrives and does not repeat.
+if (CAN_ACK) {
+  setInterval(() => {
+    if (Array.from(incidents.values()).some((i) => isRecent(i) && needsAttention(i))) beep(3, 880);
+  }, 12000);
+}
 
 // ---------- tab title ----------
 

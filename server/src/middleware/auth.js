@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const db = require('../db');
 
-// dispatcher: read only like a viewer, plus can acknowledge crashes on the live board.
+// dispatcher: read only like a viewer, plus the only role that can acknowledge crashes on the live board.
 const RANK = { viewer: 1, dispatcher: 2, admin: 3, super_admin: 4 };
 
 // Loads the admin from the database on every request, so a disabled account, a changed role or a
