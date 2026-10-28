@@ -91,8 +91,10 @@ function renderSidebar(activePage) {
     "<nav>" + linksHtml + "</nav>" +
     '<div class="sidebar-footer">' +
     '<div class="live"><span class="dot neutral" id="liveDot"></span><span id="liveText">Connecting...</span></div>' +
-    '<div class="who"></div><a href="change-password.html">Change password</a><a href="#" id="logoutLink">Log out</a></div>';
-  sidebar.querySelector(".who").textContent = (localStorage.getItem("adminEmail") || "Admin") + " (" + role.replace("_", " ") + ")";
+    '<div class="who"><span class="who-email"></span><span class="who-role"></span></div>' +
+    '<div class="footer-links"><a href="change-password.html">Change password</a><a href="#" id="logoutLink">Log out</a></div></div>';
+  sidebar.querySelector(".who-email").textContent = localStorage.getItem("adminEmail") || "Admin";
+  sidebar.querySelector(".who-role").textContent = role.replace("_", " ");
 
   const layout = document.querySelector(".layout");
   layout.insertBefore(sidebar, layout.firstChild);
