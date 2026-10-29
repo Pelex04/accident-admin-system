@@ -272,3 +272,109 @@ test('a database made before this change gets the new columns without losing dat
   assert.equal(row.role, 'next_of_kin');
   old.close();
 });
+
+// ---- starting point, distance and drive time ----
+
+const http = require('node:http');
+const routing = require('../src/utils/routing');
+
+async function withRoutingServer(handler, fn) {
+  let hits = 0;
+  const srv = http.createServer((req, res) => { hits += 1; handler(req, res); });
+  srv.listen(0);
+  await once(srv, 'listening');
+  const before = process.env.ROUTING_URL;
+  process.env.ROUTING_URL = 'http://127.0.0.1:' + srv.address().port;
+  routing._cache.clear();
+  try { return await fn(() => hits); } finally {
+    if (before === undefined) delete process.env.ROUTING_URL; else process.env.ROUTING_URL = before;
+    srv.close();
+  }
+}
+const okRoute = (req, res) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ code: 'Ok', routes: [{ distance: 12345, duration: 1080 }] })); };
+
+test('every account keeps its own starting point, it is checked, and it can be removed', async () => {
+  const adminTok = await makeAdmin('station-admin@test.local', 'admin');
+  assert.deepEqual((await call('GET', '/api/live/base', undefined, admin(ctx.dispatcher))).body, { base: null });
+  assert.equal((await call('GET', '/api/live/base')).status, 401);
+
+  const set = await call('PUT', '/api/live/base', { label: 'Chilomoni station', latitude: -15.79, longitude: '35.02' }, admin(ctx.dispatcher));
+  assert.equal(set.status, 200);
+  assert.deepEqual(set.body.base, { label: 'Chilomoni station', latitude: -15.79, longitude: 35.02 });
+  assert.equal((await call('GET', '/api/live/base', undefined, admin(ctx.dispatcher))).body.base.label, 'Chilomoni station');
+
+  // Another account is not affected, and even a viewer can keep one (it is a personal setting)
+  assert.equal((await call('GET', '/api/live/base', undefined, admin(adminTok))).body.base, null);
+  assert.equal((await call('PUT', '/api/live/base', { latitude: -15.4, longitude: 35.3 }, admin(ctx.viewer))).body.base.label, 'My starting point');
+
+  for (const bad of [{ latitude: 91, longitude: 35 }, { latitude: -15, longitude: 181 }, { latitude: 'abc', longitude: 35 }, { longitude: 35 }, { latitude: '', longitude: 35 }]) {
+    assert.equal((await call('PUT', '/api/live/base', bad, admin(ctx.dispatcher))).status, 400, JSON.stringify(bad));
+  }
+  assert.equal((await call('GET', '/api/live/base', undefined, admin(ctx.dispatcher))).body.base.label, 'Chilomoni station', 'a refused change leaves it as it was');
+
+  assert.deepEqual((await call('DELETE', '/api/live/base', undefined, admin(ctx.dispatcher))).body, { base: null });
+  assert.equal((await call('GET', '/api/live/base', undefined, admin(ctx.dispatcher))).body.base, null);
+  await call('DELETE', '/api/live/base', undefined, admin(ctx.viewer));
+});
+
+test('route: asks for a starting point first, then gives road distance and time, and reuses the answer', async () => {
+  const made = await call('POST', '/api/device/crash', { clientEventId: 'route-1', status: 'alert_sent', latitude: -15.7861, longitude: 35.0058 }, dev(ctx.key));
+  const id = made.body.event.id;
+  const nothing = await call('POST', '/api/device/crash', { clientEventId: 'route-none', status: 'countdown' }, dev(ctx.key));
+
+  assert.equal((await call('GET', `/api/live/${id}/route`)).status, 401);
+  assert.equal((await call('GET', '/api/live/nope/route', undefined, admin(ctx.dispatcher))).status, 404);
+  assert.equal((await call('GET', `/api/live/${id}/route`, undefined, admin(ctx.dispatcher))).body.needsBase, true);
+
+  await call('PUT', '/api/live/base', { label: 'Chilomoni station', latitude: -15.79, longitude: 35.02 }, admin(ctx.dispatcher));
+  assert.equal((await call('GET', `/api/live/${nothing.body.event.id}/route`, undefined, admin(ctx.dispatcher))).status, 404, 'no location yet');
+
+  await withRoutingServer(okRoute, async (hits) => {
+    const first = await call('GET', `/api/live/${id}/route`, undefined, admin(ctx.dispatcher));
+    assert.equal(first.status, 200);
+    assert.deepEqual(first.body, { needsBase: false, from: 'Chilomoni station', distanceKm: 12.3, minutes: 18, source: 'road' });
+    await call('GET', `/api/live/${id}/route`, undefined, admin(ctx.dispatcher));
+    assert.equal(hits(), 1, 'the second request came from memory');
+  });
+  await call('DELETE', '/api/live/base', undefined, admin(ctx.dispatcher));
+});
+
+test('route: when the routing service fails, gives a labelled straight line estimate instead of an error, and tries again next time', async () => {
+  const made = await call('POST', '/api/device/crash', { clientEventId: 'route-2', status: 'alert_sent', latitude: -15.80, longitude: 35.05 }, dev(ctx.key));
+  const id = made.body.event.id;
+  await call('PUT', '/api/live/base', { label: 'Base', latitude: -15.79, longitude: 35.02 }, admin(ctx.dispatcher));
+  const ask = async () => (await call('GET', `/api/live/${id}/route`, undefined, admin(ctx.dispatcher))).body;
+
+  const failures = [
+    (req, res) => { res.statusCode = 500; res.end('boom'); },
+    (req, res) => { res.end('this is not json'); },
+    (req, res) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ code: 'NoRoute', routes: [] })); },
+    (req, res) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ code: 'Ok', routes: [{ distance: 'far', duration: null }] })); }
+  ];
+  for (const bad of failures) {
+    await withRoutingServer(bad, async () => {
+      const r = await ask();
+      assert.equal(r.source, 'estimate');
+      assert.ok(r.distanceKm > 0 && r.minutes >= 1, 'an estimate has numbers');
+      assert.ok(r.distanceKm < 15, 'a few kilometres apart, not nonsense: ' + r.distanceKm);
+    });
+  }
+
+  // an estimate is not kept: as soon as the service answers, the road figure is used
+  await withRoutingServer(okRoute, async () => assert.equal((await ask()).source, 'road'));
+
+  // routing switched off on purpose
+  routing._cache.clear();
+  const before = process.env.ROUTING_URL; process.env.ROUTING_URL = 'off';
+  assert.equal((await ask()).source, 'estimate');
+  if (before === undefined) delete process.env.ROUTING_URL; else process.env.ROUTING_URL = before;
+  await call('DELETE', '/api/live/base', undefined, admin(ctx.dispatcher));
+});
+
+test('the straight line estimate is sensible', () => {
+  // Blantyre to Lilongwe is about 240 km as the crow flies and about 310 to 340 km by road
+  const e = routing.estimate({ lat: -15.7861, lng: 35.0058 }, { lat: -13.9626, lng: 33.7741 });
+  assert.ok(e.distanceKm > 300 && e.distanceKm < 380, String(e.distanceKm));
+  assert.ok(e.minutes > 440 && e.minutes < 580, String(e.minutes));
+  assert.deepEqual(routing.estimate({ lat: -15.7, lng: 35 }, { lat: -15.7, lng: 35 }), { distanceKm: 0, minutes: 1, source: 'estimate' });
+});

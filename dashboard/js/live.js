@@ -248,6 +248,190 @@ async function runStream() {
   }
 }
 
+// ---------- directions, distance and drive time ----------
+// Distance and time are measured from a starting point the person saves for their own account (a station, a base,
+// wherever they usually leave from). A laptop has no GPS, so guessing the start from the browser can be kilometres
+// out; a saved point is honest about where the figure comes from. "Directions" opens Google Maps or Waze, which use
+// the phone's real position, so that is what to use once the person is actually on the move.
+
+let base;                      // undefined = not loaded yet, null = none saved, otherwise { label, latitude, longitude }
+let baseVersion = 0;
+let baseEditing = false;
+const routes = new Map();      // "version|id|lat,lon" -> "loading" | "error" | { from, distanceKm, minutes, source }
+const qrOpen = new Set();
+const routeQueue = [];
+let routeBusy = 0;
+const baseBar = document.getElementById("baseBar");
+
+const hasLoc = (i) => i.latitude !== null && i.latitude !== undefined && i.longitude !== null && i.longitude !== undefined;
+const routeKey = (i) => baseVersion + "|" + i.id + "|" + Number(i.latitude).toFixed(6) + "," + Number(i.longitude).toFixed(6);
+const dest = (i) => Number(i.latitude).toFixed(6) + "," + Number(i.longitude).toFixed(6);
+const googleDirections = (i) => "https://www.google.com/maps/dir/?api=1&destination=" + dest(i) + "&travelmode=driving";
+const wazeDirections = (i) => "https://waze.com/ul?ll=" + dest(i) + "&navigate=yes";
+
+function fmtKm(km) { return km < 10 ? km.toFixed(1) + " km" : Math.round(km) + " km"; }
+function fmtTime(min) {
+  if (min < 60) return min + " min";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h + " h" + (m ? " " + m + " min" : "");
+}
+
+function qrSvg(text) {
+  try {
+    const q = qrcode(0, "M");
+    q.addData(text);
+    q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  } catch (err) {
+    return "";
+  }
+}
+
+function routeHtml(i) {
+  if (!hasLoc(i) || i.status === "cancelled" || base === undefined) return "";
+  if (base === null) {
+    return '<div class="inc-route none"><button type="button" class="linklike" data-open-base>Set your starting point</button> to see the distance and drive time from where you leave.</div>';
+  }
+  const r = routes.get(routeKey(i));
+  if (!r || r === "loading") return '<div class="inc-route">Working out the distance...</div>';
+  if (r === "error") return '<div class="inc-route none">Could not work out the distance. Use Directions.</div>';
+  const estimate = r.source === "estimate";
+  return '<div class="inc-route"><span class="route-main">' + (estimate ? "About " : "") + esc(fmtKm(r.distanceKm)) + " \u00B7 " +
+    (estimate ? "roughly " : "about ") + esc(fmtTime(r.minutes)) + '</span> <span class="route-from">from ' + esc(r.from) +
+    (estimate ? " (straight line estimate, the route service did not answer)" : " (normal drive, traffic not included)") + "</span></div>";
+}
+
+function navHtml(i) {
+  if (!hasLoc(i) || i.status === "cancelled") return "";
+  const unreached = i.deliveries.some((d) => d.role === "dispatcher" && d.status === "failed");
+  const open = unreached || qrOpen.has(i.id);
+  let html = '<div class="inc-nav">' +
+    '<a class="btn secondary" href="' + esc(googleDirections(i)) + '" target="_blank" rel="noopener">Directions</a>' +
+    '<a class="btn secondary" href="' + esc(wazeDirections(i)) + '" target="_blank" rel="noopener">Waze</a>' +
+    (unreached ? "" : '<button type="button" class="btn secondary" data-qr="' + esc(i.id) + '" aria-expanded="' + open + '">' + (open ? "Hide phone code" : "Send to phone") + "</button>") +
+    "</div>";
+  if (open) {
+    const svg = qrSvg(googleDirections(i));
+    if (svg) {
+      html += '<div class="inc-qr"><div class="qr-code" role="img" aria-label="Code that opens directions on a phone">' + svg + "</div><div>" +
+        (unreached ? "<strong>The SMS to the dispatcher did not get through.</strong> " : "") +
+        "Scan this with a phone camera to open directions to the crash.</div></div>";
+    }
+  }
+  return html;
+}
+
+// At most two routes are worked out at once, so a busy board does not flood the routing service.
+function pumpRoutes() {
+  while (routeBusy < 2 && routeQueue.length) {
+    const job = routeQueue.shift();
+    routeBusy += 1;
+    (async () => {
+      try {
+        const r = await api.getRoute(job.id);
+        if (r.needsBase) routes.delete(job.key); else routes.set(job.key, r);
+      } catch (err) {
+        routes.set(job.key, "error");
+        setTimeout(() => { if (routes.get(job.key) === "error") { routes.delete(job.key); wantRoutes(); render(); } }, 30000);
+      }
+      routeBusy -= 1;
+      render();
+      pumpRoutes();
+    })();
+  }
+}
+
+function wantRoutes() {
+  if (!base) return;
+  incidents.forEach((i) => {
+    if (!isRecent(i) || i.status === "cancelled" || !hasLoc(i)) return;
+    const key = routeKey(i);
+    if (routes.has(key)) return;
+    routes.set(key, "loading");
+    routeQueue.push({ id: i.id, key });
+  });
+  pumpRoutes();
+}
+
+function parseCoords(text) {
+  const m = /^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(String(text || ""));
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lon = Number(m[2]);
+  return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 ? { lat, lon } : null;
+}
+
+function renderBaseBar() {
+  if (base === undefined) { baseBar.innerHTML = ""; return; }
+  if (!baseEditing) {
+    baseBar.innerHTML = base
+      ? '<span>Distances are measured from <strong>' + esc(base.label) + '</strong> <span class="mono">(' + esc(base.latitude.toFixed(4)) + ", " + esc(base.longitude.toFixed(4)) + ')</span></span> <button type="button" class="linklike" data-base-edit>Change</button>'
+      : '<span>Set the place you usually leave from to see how far each crash is and how long the drive takes.</span> <button type="button" class="btn secondary" data-base-edit>Set starting point</button>';
+    baseBar.querySelector("[data-base-edit]").addEventListener("click", () => { baseEditing = true; renderBaseBar(); });
+    return;
+  }
+  baseBar.innerHTML =
+    '<form class="base-form" novalidate>' +
+    '<div class="form-row"><label for="baseLabel">Name (for example, the station)</label><input id="baseLabel" maxlength="60" placeholder="Chilomoni station" value="' + esc(base ? base.label : "") + '"></div>' +
+    '<div class="form-row"><label for="baseCoords">Latitude, longitude</label><input id="baseCoords" inputmode="decimal" placeholder="-15.7861, 35.0058" value="' + esc(base ? base.latitude + ", " + base.longitude : "") + '"></div>' +
+    '<p class="base-help">In Google Maps, right-click the place and click the two numbers at the top of the menu to copy them, then paste here. "Use my current location" works best on a phone. A laptop may be several kilometres out, so check it.</p>' +
+    '<div class="error-text" id="baseError" role="alert"></div>' +
+    '<div class="base-actions"><button type="submit" class="btn">Save</button>' +
+    '<button type="button" class="btn secondary" data-base-here>Use my current location</button>' +
+    '<button type="button" class="btn secondary" data-base-cancel>Cancel</button>' +
+    (base ? '<button type="button" class="linklike danger" data-base-remove>Remove</button>' : "") + "</div></form>";
+  const form = baseBar.querySelector("form");
+  const err = (m) => { baseBar.querySelector("#baseError").textContent = m || ""; };
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const c = parseCoords(baseBar.querySelector("#baseCoords").value);
+    if (!c) return err("Enter two numbers like -15.7861, 35.0058 (latitude first).");
+    err("");
+    try {
+      const saved = await api.setBase({ label: baseBar.querySelector("#baseLabel").value, latitude: c.lat, longitude: c.lon });
+      base = saved.base;
+      baseVersion += 1;
+      routes.clear();
+      baseEditing = false;
+      renderBaseBar();
+      render();
+    } catch (e) { err("Could not save: " + e.message); }
+  });
+  baseBar.querySelector("[data-base-cancel]").addEventListener("click", () => { baseEditing = false; renderBaseBar(); });
+  const remove = baseBar.querySelector("[data-base-remove]");
+  if (remove) remove.addEventListener("click", async () => {
+    try {
+      await api.clearBase();
+      base = null;
+      baseVersion += 1;
+      routes.clear();
+      baseEditing = false;
+      renderBaseBar();
+      render();
+    } catch (e) { err("Could not remove: " + e.message); }
+  });
+  baseBar.querySelector("[data-base-here]").addEventListener("click", () => {
+    if (!navigator.geolocation) return err("This browser cannot share its location. Paste the numbers instead.");
+    err("Finding your location...");
+    navigator.geolocation.getCurrentPosition((pos) => {
+      baseBar.querySelector("#baseCoords").value = pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
+      const km = pos.coords.accuracy / 1000;
+      err(km > 1 ? "Only accurate to about " + Math.round(km) + " km. Check it on a map before saving." : "");
+    }, () => err("Could not get your location. Paste the numbers instead."), { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
+async function loadBase() {
+  try {
+    base = (await api.getBase()).base;
+    baseVersion += 1;
+    routes.clear();
+    renderBaseBar();
+    render();
+  } catch (err) { /* tried again by the safety net below */ }
+}
+
 // ---------- drawing ----------
 
 function locationHtml(i) {
@@ -293,6 +477,8 @@ function cardHtml(i) {
     '<div class="inc-vehicle">' + esc(i.vehicleName) + "</div>" +
     '<div class="inc-time"><span data-time="' + esc(i.detectedAt) + '">' + esc(ago(i.detectedAt)) + "</span> \u00B7 " + esc(clock(i.detectedAt)) + "</div></div></div>" +
     (i.status === "cancelled" ? "" : locationHtml(i)) +
+    routeHtml(i) +
+    navHtml(i) +
     deliveriesHtml(i) +
     (i.notes ? '<div class="inc-notes">' + esc(i.notes) + "</div>" : "") +
     (action ? '<div class="inc-actions">' + action + "</div>" : "") +
@@ -300,6 +486,7 @@ function cardHtml(i) {
 }
 
 function render() {
+  wantRoutes();
   const all = Array.from(incidents.values()).filter(isRecent).sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1));
   const urgent = all.filter(needsAttention);
   const watching = all.filter((i) => !needsAttention(i) && (i.status === "detected" || i.status === "countdown"));
@@ -311,6 +498,16 @@ function render() {
     ? section("Needs attention", urgent) + section("Possible crashes, driver may cancel", watching) + section("Acknowledged", handled) + section("Cancelled by driver", cancelled)
     : '<div class="board-empty">No crashes in the last 24 hours. This page updates by itself.</div>';
   boardEl.querySelectorAll("[data-ack]").forEach((button) => button.addEventListener("click", () => acknowledge(button)));
+  boardEl.querySelectorAll("[data-qr]").forEach((button) => button.addEventListener("click", () => {
+    const id = button.dataset.qr;
+    if (qrOpen.has(id)) qrOpen.delete(id); else qrOpen.add(id);
+    render();
+  }));
+  boardEl.querySelectorAll("[data-open-base]").forEach((button) => button.addEventListener("click", () => {
+    baseEditing = true;
+    renderBaseBar();
+    if (baseBar.scrollIntoView) baseBar.scrollIntoView({ behavior: "smooth", block: "center" });
+  }));
 }
 
 async function acknowledge(button) {
@@ -336,9 +533,11 @@ setInterval(() => {
   for (;;) {
     await sleep(connection === "live" ? 60000 : 10000);
     try { await loadAll(); } catch (err) { /* the stream indicator already tells the story */ }
+    if (base === undefined) loadBase();
   }
 })();
 
 showSoundState();
+loadBase();
 setConnection("connecting");
 loadAll().catch((err) => { boardEl.innerHTML = '<div class="board-empty">Could not load the board: ' + esc(err.message) + ". Retrying.</div>"; }).then(runStream);

@@ -195,6 +195,10 @@ const db = {
     await addColumn('crash_events', 'updated_at', 'TEXT');
     await addColumn('crash_events', 'acknowledged_at', 'TEXT');
     await addColumn('crash_events', 'acknowledged_by', 'TEXT');
+    // Where each dispatcher's distances are measured from.
+    await addColumn('admin_users', 'base_label', 'TEXT');
+    await addColumn('admin_users', 'base_lat', 'DOUBLE PRECISION');
+    await addColumn('admin_users', 'base_lng', 'DOUBLE PRECISION');
     await importLegacyJson();
   }
 };

@@ -106,6 +106,10 @@ const api = {
 
   getLive: () => apiRequest("/live"),
   ackIncident: (id) => apiRequest("/live/" + id + "/ack", { method: "POST", body: {} }),
+  getBase: () => apiRequest("/live/base"),
+  setBase: (base) => apiRequest("/live/base", { method: "PUT", body: base }),
+  clearBase: () => apiRequest("/live/base", { method: "DELETE" }),
+  getRoute: (id) => apiRequest("/live/" + id + "/route"),
 
   getDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key"),
   createDeviceKey: (vehicleId) => apiRequest("/vehicles/" + vehicleId + "/device-key", { method: "POST", body: {} }),

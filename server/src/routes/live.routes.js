@@ -1,6 +1,10 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { wrap } = require('../utils/http');
+const { audit } = require('../utils/audit');
+const { bus, touch, latestSeq, recentIncidents, incidentsByIds } = require('../utils/incidents');
+const { route } = require('../utils/routing');
 
 // Only dispatcher accounts acknowledge. Admins and super admins watch the board but do not take crashes,
 // so "acknowledged by" always names someone whose job it is to respond.
@@ -8,9 +12,6 @@ const onlyDispatchers = (req, res, next) =>
   req.admin.role === 'dispatcher'
     ? next()
     : res.status(403).json({ error: 'Only dispatcher accounts can acknowledge a crash', code: 'forbidden' });
-const { wrap } = require('../utils/http');
-const { audit } = require('../utils/audit');
-const { bus, touch, latestSeq, recentIncidents, incidentsByIds } = require('../utils/incidents');
 
 // The live board for dispatchers and admins: what is happening now, pushed as it changes.
 const router = express.Router();
@@ -32,6 +33,51 @@ router.get('/', wrap(async (req, res) => {
 }));
 
 // A dispatcher taps Acknowledge so everyone watching the board knows someone has taken it.
+// ---- Where this person's distances are measured from (a station, a base, wherever they usually leave from) ----
+// Every signed in account can keep its own, whatever its role. It is a personal setting, not a record.
+
+const number = (v) => (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '') ? Number(v) : NaN);
+
+function baseOf(row) {
+  return row && row.base_lat !== null && row.base_lat !== undefined && row.base_lng !== null && row.base_lng !== undefined
+    ? { label: row.base_label || 'My starting point', latitude: Number(row.base_lat), longitude: Number(row.base_lng) }
+    : null;
+}
+
+router.get('/base', wrap(async (req, res) => {
+  const row = await db.get('SELECT base_label, base_lat, base_lng FROM admin_users WHERE id = ?', [req.admin.id]);
+  res.json({ base: baseOf(row) });
+}));
+
+router.put('/base', wrap(async (req, res) => {
+  const lat = number(req.body && req.body.latitude);
+  const lng = number(req.body && req.body.longitude);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) return res.status(400).json({ error: 'Latitude must be a number from -90 to 90' });
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) return res.status(400).json({ error: 'Longitude must be a number from -180 to 180' });
+  const label = String((req.body && req.body.label) || '').trim().slice(0, 60) || 'My starting point';
+  await db.run('UPDATE admin_users SET base_label = ?, base_lat = ?, base_lng = ? WHERE id = ?', [label, lat, lng, req.admin.id]);
+  res.json({ base: { label, latitude: lat, longitude: lng } });
+}));
+
+router.delete('/base', wrap(async (req, res) => {
+  await db.run('UPDATE admin_users SET base_label = NULL, base_lat = NULL, base_lng = NULL WHERE id = ?', [req.admin.id]);
+  res.json({ base: null });
+}));
+
+// Distance and drive time from this person's starting point to one crash.
+router.get('/:id/route', wrap(async (req, res) => {
+  const event = await db.get('SELECT id, latitude, longitude FROM crash_events WHERE id = ?', [req.params.id]);
+  if (!event) return res.status(404).json({ error: 'Crash not found' });
+  if (event.latitude === null || event.latitude === undefined || event.longitude === null || event.longitude === undefined) {
+    return res.status(404).json({ error: 'This crash has no location yet', code: 'no_location' });
+  }
+  const row = await db.get('SELECT base_label, base_lat, base_lng FROM admin_users WHERE id = ?', [req.admin.id]);
+  const base = baseOf(row);
+  if (!base) return res.json({ needsBase: true });
+  const found = await route({ lat: base.latitude, lng: base.longitude }, { lat: Number(event.latitude), lng: Number(event.longitude) });
+  res.json({ needsBase: false, from: base.label, distanceKm: found.distanceKm, minutes: found.minutes, source: found.source });
+}));
+
 router.post('/:id/ack', onlyDispatchers, wrap(async (req, res) => {
   const row = await db.get('SELECT * FROM crash_events WHERE id = ?', [req.params.id]);
   if (!row) return res.status(404).json({ error: 'Crash event not found' });

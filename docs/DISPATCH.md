@@ -58,3 +58,32 @@ Applied automatically at start and safe to repeat: `contacts.role`, `crash_event
 ## Hosting note
 
 On Render's free plan the service sleeps after about 15 minutes without a request and takes around a minute to wake. The phones check in about hourly, which does not keep it awake. For real dispatch use an always-on plan, or keep SMS as the primary path (it does not depend on this server).
+
+## Directions, distance and drive time
+
+Each crash card on the live board has **Directions** (Google Maps) and **Waze** buttons, and a **Send to phone** button
+that shows a QR code for the same directions link. If the SMS to the dispatcher failed, the QR code is shown on that
+card by itself. Both apps start from the phone's own position, so use them once you are on the move.
+
+The card also shows distance and drive time from a **starting point** each person saves for their own account (a
+station, a base, wherever they usually leave from). A laptop has no GPS, so guessing from the browser can be
+kilometres out. A saved point says plainly where the figure comes from.
+
+| Method and path | Who | What |
+|---|---|---|
+| `GET /api/live/base` | any signed in account | `{ base: { label, latitude, longitude } }` or `{ base: null }` |
+| `PUT /api/live/base` | any signed in account | Body `{ label?, latitude, longitude }`. 400 for numbers out of range. |
+| `DELETE /api/live/base` | any signed in account | Removes it. |
+| `GET /api/live/:id/route` | any signed in account | `{ needsBase: true }`, or `{ needsBase: false, from, distanceKm, minutes, source }`. 404 if the crash has no location yet. |
+
+`source` is `road` (from a routing service) or `estimate` (straight line distance times 1.4, at 40 km/h). The board
+labels estimates as estimates. An estimate is used when the routing service is slow, down or answers with something
+unusable, so the card never shows an empty gap. Road answers are remembered for 10 minutes; estimates are not.
+
+**Routing service.** `ROUTING_URL` is the address of an OSRM compatible service. If it is not set, the public demo
+server `https://router.project-osrm.org` is used: free, but with no guarantee and a request to keep use light. For
+anything you rely on, run your own OSRM or use a paid service and set `ROUTING_URL`. Set it to `off` to always use
+the straight line estimate. Drive times do not include traffic.
+
+The dispatcher SMS carries a directions link (`google.com/maps/dir//lat,lng`). The next of kin SMS carries a plain
+map pin.
