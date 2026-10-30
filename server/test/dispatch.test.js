@@ -278,16 +278,19 @@ test('a database made before this change gets the new columns without losing dat
 const http = require('node:http');
 const routing = require('../src/utils/routing');
 
-async function withRoutingServer(handler, fn) {
+async function withRoutingServer(handler, fn, opts = {}) {
   let hits = 0;
   const srv = http.createServer((req, res) => { hits += 1; handler(req, res); });
   srv.listen(0);
   await once(srv, 'listening');
   const before = process.env.ROUTING_URL;
+  const beforeFactor = process.env.ROUTE_TIME_FACTOR;
   process.env.ROUTING_URL = 'http://127.0.0.1:' + srv.address().port;
+  if (!opts.keepFactor) process.env.ROUTE_TIME_FACTOR = '1';   // most tests want the engine's own time
   routing._cache.clear();
   try { return await fn(() => hits); } finally {
     if (before === undefined) delete process.env.ROUTING_URL; else process.env.ROUTING_URL = before;
+    if (beforeFactor === undefined) delete process.env.ROUTE_TIME_FACTOR; else process.env.ROUTE_TIME_FACTOR = beforeFactor;
     srv.close();
   }
 }
@@ -377,4 +380,24 @@ test('the straight line estimate is sensible', () => {
   assert.ok(e.distanceKm > 300 && e.distanceKm < 380, String(e.distanceKm));
   assert.ok(e.minutes > 440 && e.minutes < 580, String(e.minutes));
   assert.deepEqual(routing.estimate({ lat: -15.7, lng: 35 }, { lat: -15.7, lng: 35 }), { distanceKm: 0, minutes: 1, source: 'estimate' });
+});
+
+test('route: drive time is corrected for real city driving, the correction can be tuned, and bad settings are ignored', async () => {
+  const made = await call('POST', '/api/device/crash', { clientEventId: 'route-3', status: 'alert_sent', latitude: -15.7861, longitude: 35.0058 }, dev(ctx.key));
+  const id = made.body.event.id;
+  await call('PUT', '/api/live/base', { label: 'Base', latitude: -15.79, longitude: 35.02 }, admin(ctx.dispatcher));
+  const minutes = async () => (await call('GET', `/api/live/${id}/route`, undefined, admin(ctx.dispatcher))).body.minutes;
+  const saved = process.env.ROUTE_TIME_FACTOR;
+  await withRoutingServer(okRoute, async () => {          // the engine says 1080 s = 18 min
+    delete process.env.ROUTE_TIME_FACTOR;
+    assert.equal(await minutes(), 31, 'default correction of 1.7: 18 min becomes about 31');
+    process.env.ROUTE_TIME_FACTOR = '2';
+    assert.equal(await minutes(), 36, 'tuned to 2, and applied to the remembered answer straight away');
+    for (const bad of ['abc', '0.2', '9', '', '-1']) {
+      process.env.ROUTE_TIME_FACTOR = bad;
+      assert.equal(await minutes(), 31, 'unusable setting "' + bad + '" falls back to the default');
+    }
+  }, { keepFactor: true });
+  if (saved === undefined) delete process.env.ROUTE_TIME_FACTOR; else process.env.ROUTE_TIME_FACTOR = saved;
+  await call('DELETE', '/api/live/base', undefined, admin(ctx.dispatcher));
 });

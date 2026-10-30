@@ -61,9 +61,11 @@ On Render's free plan the service sleeps after about 15 minutes without a reques
 
 ## Directions, distance and drive time
 
-Each crash card on the live board has **Directions** (Google Maps) and **Waze** buttons, and a **Send to phone** button
-that shows a QR code for the same directions link. If the SMS to the dispatcher failed, the QR code is shown on that
-card by itself. Both apps start from the phone's own position, so use them once you are on the move.
+Each crash card on the live board has a **Directions** button (Google Maps) and a **Send to phone** button that shows a
+QR code for the same link. If the SMS to the dispatcher failed, the QR code is shown on that card by itself. When a
+starting point is saved, the link starts from it, so Maps matches the distance on the card. A small link, "Start from my
+current location instead", opens the same route from the device's own position, for when someone is already on the road.
+Waze is not offered: its links can only name a destination, so on a laptop it can show only the crash.
 
 The card also shows distance and drive time from a **starting point** each person saves for their own account (a
 station, a base, wherever they usually leave from). A laptop has no GPS, so guessing from the browser can be
@@ -83,7 +85,12 @@ unusable, so the card never shows an empty gap. Road answers are remembered for 
 **Routing service.** `ROUTING_URL` is the address of an OSRM compatible service. If it is not set, the public demo
 server `https://router.project-osrm.org` is used: free, but with no guarantee and a request to keep use light. For
 anything you rely on, run your own OSRM or use a paid service and set `ROUTING_URL`. Set it to `off` to always use
-the straight line estimate. Drive times do not include traffic.
+the straight line estimate.
+
+**Drive time correction.** A routing engine times a trip as if the roads were empty. `ROUTE_TIME_FACTOR` multiplies the
+engine's time to allow for real driving (default `1.7`, from one 4 km city trip the engine called 6 minutes that took 10
+to 12). Compare a few real drives and set it to suit. Allowed range 1 to 5; anything else is ignored. Traffic itself is
+not measured.
 
 The dispatcher SMS carries a directions link (`google.com/maps/dir//lat,lng`). The next of kin SMS carries a plain
 map pin.

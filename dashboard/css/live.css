@@ -80,3 +80,5 @@
   .inc-qr { flex-direction: column; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) { .inc-qr { scroll-behavior: auto; } }
+
+.inc-alt { font-size: 13px; margin-top: -4px; }

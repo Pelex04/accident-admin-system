@@ -266,8 +266,12 @@ const baseBar = document.getElementById("baseBar");
 const hasLoc = (i) => i.latitude !== null && i.latitude !== undefined && i.longitude !== null && i.longitude !== undefined;
 const routeKey = (i) => baseVersion + "|" + i.id + "|" + Number(i.latitude).toFixed(6) + "," + Number(i.longitude).toFixed(6);
 const dest = (i) => Number(i.latitude).toFixed(6) + "," + Number(i.longitude).toFixed(6);
-const googleDirections = (i) => "https://www.google.com/maps/dir/?api=1&destination=" + dest(i) + "&travelmode=driving";
-const wazeDirections = (i) => "https://waze.com/ul?ll=" + dest(i) + "&navigate=yes";
+// With a starting point saved, directions start from it, so what Maps shows matches the distance on the card.
+// Without one (or when asked for) Google Maps starts from the device's own position. Waze is not offered: its links
+// can only name a destination, so on a laptop it can show nothing but the crash.
+const googleDirections = (i, fromSaved = true) => "https://www.google.com/maps/dir/?api=1" +
+  (fromSaved && base ? "&origin=" + Number(base.latitude).toFixed(6) + "," + Number(base.longitude).toFixed(6) : "") +
+  "&destination=" + dest(i) + "&travelmode=driving";
 
 function fmtKm(km) { return km < 10 ? km.toFixed(1) + " km" : Math.round(km) + " km"; }
 function fmtTime(min) {
@@ -299,7 +303,7 @@ function routeHtml(i) {
   const estimate = r.source === "estimate";
   return '<div class="inc-route"><span class="route-main">' + (estimate ? "About " : "") + esc(fmtKm(r.distanceKm)) + " \u00B7 " +
     (estimate ? "roughly " : "about ") + esc(fmtTime(r.minutes)) + '</span> <span class="route-from">from ' + esc(r.from) +
-    (estimate ? " (straight line estimate, the route service did not answer)" : " (normal drive, traffic not included)") + "</span></div>";
+    (estimate ? " (straight line estimate, the route service did not answer)" : " (estimated drive, traffic not measured)") + "</span></div>";
 }
 
 function navHtml(i) {
@@ -308,15 +312,15 @@ function navHtml(i) {
   const open = unreached || qrOpen.has(i.id);
   let html = '<div class="inc-nav">' +
     '<a class="btn secondary" href="' + esc(googleDirections(i)) + '" target="_blank" rel="noopener">Directions</a>' +
-    '<a class="btn secondary" href="' + esc(wazeDirections(i)) + '" target="_blank" rel="noopener">Waze</a>' +
     (unreached ? "" : '<button type="button" class="btn secondary" data-qr="' + esc(i.id) + '" aria-expanded="' + open + '">' + (open ? "Hide phone code" : "Send to phone") + "</button>") +
-    "</div>";
+    "</div>" +
+    (base ? '<div class="inc-alt"><a class="linklike" href="' + esc(googleDirections(i, false)) + '" target="_blank" rel="noopener">Start from my current location instead</a></div>' : "");
   if (open) {
     const svg = qrSvg(googleDirections(i));
     if (svg) {
       html += '<div class="inc-qr"><div class="qr-code" role="img" aria-label="Code that opens directions on a phone">' + svg + "</div><div>" +
         (unreached ? "<strong>The SMS to the dispatcher did not get through.</strong> " : "") +
-        "Scan this with a phone camera to open directions to the crash.</div></div>";
+        "Scan this with a phone camera to open directions " + (base ? "from " + esc(base.label) + " " : "") + "to the crash.</div></div>";
     }
   }
   return html;
