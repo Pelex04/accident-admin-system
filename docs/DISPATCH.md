@@ -92,5 +92,10 @@ engine's time to allow for real driving (default `1.7`, from one 4 km city trip 
 to 12). Compare a few real drives and set it to suit. Allowed range 1 to 5; anything else is ignored. Traffic itself is
 not measured.
 
+**Send to WhatsApp.** Opens WhatsApp with a ready message (crash or possible crash, vehicle, reference code, time and
+a map pin link) so the dispatcher can pick their group and send it. WhatsApp does not let a web page post into a group
+by itself, so this is one extra tap, not automatic. The message uses the plain pin, not directions, because each person
+in the group starts from somewhere different, and it leaves out the free-text notes.
+
 The dispatcher SMS carries a directions link (`google.com/maps/dir//lat,lng`). The next of kin SMS carries a plain
 map pin.

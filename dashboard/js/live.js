@@ -281,6 +281,21 @@ function fmtTime(min) {
   return h + " h" + (m ? " " + m + " min" : "");
 }
 
+// A WhatsApp message for a dispatchers' group. WhatsApp offers no way for a web page to post into a group by itself,
+// so the button opens WhatsApp with this text ready and the person picks the group and presses send.
+// It carries the plain map pin, not directions: everyone in the group sets off from somewhere different, and
+// WhatsApp shows a map preview for the pin. The free-text notes are left out on purpose.
+function whatsappText(i) {
+  const confirmed = tone(i) !== "possible";
+  return (confirmed ? "\uD83D\uDEA8 CRASH, help needed" : "\u26A0\uFE0F POSSIBLE crash, not confirmed yet") + "\n" +
+    "Vehicle: " + i.vehicleName + "\n" +
+    (i.ref ? "Ref: " + i.ref + "\n" : "") +
+    "Time: " + clock(i.detectedAt) + "\n" +
+    "Location: https://maps.google.com/?q=" + dest(i) + "\n" +
+    "Reply here if you are taking this.";
+}
+const whatsappLink = (i) => "https://wa.me/?text=" + encodeURIComponent(whatsappText(i));
+
 function qrSvg(text) {
   try {
     const q = qrcode(0, "M");
@@ -312,6 +327,7 @@ function navHtml(i) {
   const open = unreached || qrOpen.has(i.id);
   let html = '<div class="inc-nav">' +
     '<a class="btn secondary" href="' + esc(googleDirections(i)) + '" target="_blank" rel="noopener">Directions</a>' +
+    '<a class="btn secondary" href="' + esc(whatsappLink(i)) + '" target="_blank" rel="noopener">Send to WhatsApp</a>' +
     (unreached ? "" : '<button type="button" class="btn secondary" data-qr="' + esc(i.id) + '" aria-expanded="' + open + '">' + (open ? "Hide phone code" : "Send to phone") + "</button>") +
     "</div>" +
     (base ? '<div class="inc-alt"><a class="linklike" href="' + esc(googleDirections(i, false)) + '" target="_blank" rel="noopener">Start from my current location instead</a></div>' : "");
