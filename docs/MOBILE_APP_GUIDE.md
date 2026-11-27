@@ -1,43 +1,58 @@
 # Mobile app connection guide
 
-For the developer of the Android app. This replaces the old way of connecting (admin email and password inside the app).
+How to connect the Android app to the server. Follow Steps 1 to 4 in order. Everything after that is reference.
 
-## Read this first
+## Contents
 
-1. **The app never needs an admin email or password. Remove those fields.**
-2. The app needs only two values: the **server address** and a **device key**.
-3. Each vehicle has its own device key. An admin creates it in the dashboard (steps in section 2).
-4. Send the key on every request in the header `X-Device-Key`.
-5. The SMS alert flow stays exactly as it is today. Calls to this server are a **best effort extra layer**. Never wait for the network before sending the SMS, and never let a failed call stop it.
+- [The short version](#the-short-version)
+- [Step 1: Get a device key](#step-1-get-a-device-key)
+- [Step 2: Test the connection](#step-2-test-the-connection)
+- [Step 3: Build the app behaviour](#step-3-build-the-app-behaviour)
+- [Step 4: Check your work](#step-4-check-your-work)
+- [Endpoint reference](#endpoint-reference)
+- [Kotlin example](#kotlin-example)
+- [Moving from admin login](#moving-from-admin-login)
+- [Troubleshooting](#troubleshooting)
 
-What a device key can do: report crashes for its own vehicle, update those reports, check in (heartbeat), and read its own vehicle's contacts. It cannot read or change anything else, and it cannot sign in to the dashboard. If a phone is lost, an admin revokes or regenerates that one key and nothing else is affected.
+## The short version
 
-## 1. Why the old way was a problem
+The app needs two settings:
 
-Signing in as an admin from the app meant every phone carried a login with full control of the system. Admin logins also expire after 12 hours, force a password change on first use, and are rate limited, which is why the app kept failing to connect. Device keys fix all of that: they do not expire, there is no password change, and they only work for one vehicle.
+| Setting | Example |
+| --- | --- |
+| Server address | `https://your-server.example.com/api` |
+| Device key | `dk_` followed by 43 characters |
 
-## 2. Setup (done by an admin, once per vehicle)
+Three rules:
 
-1. Open the dashboard and sign in.
-2. Go to **Vehicles**, open the vehicle, and find the **Device access** card.
-3. Press **Create device key**.
-4. A dialog shows the **server address** and the **device key**. Copy both. The key is shown only once.
-5. Enter them in the app (a settings screen with two fields: Server address and Device key).
+1. **SMS comes first.** Never wait for the server before sending an SMS, and never let a failed server call stop it.
+2. **No admin login in the app.** Remove any email and password fields.
+3. **Send the key on every `/device/...` request** in the `X-Device-Key` header.
 
-If the key is lost or leaked, press **Regenerate key** (the old key stops working immediately) or **Revoke key**.
+A device key belongs to one vehicle. It can report and update that vehicle's crashes, send check ins and read that vehicle's contacts. It cannot do anything else. It does not expire.
 
-Notes for the developer:
-- The server address already ends in `/api`, for example `https://your-server.example.com/api`. Use it as the base for every path below.
-- Keys look like `dk_` followed by 43 characters. Trim spaces and line breaks when the admin pastes one.
+## Step 1: Get a device key
 
-## 3. Try it in one minute (curl)
+An admin does this once for each vehicle.
 
-Set your two values, then paste the block.
+1. Sign in to the dashboard.
+2. Open **Vehicles**, then open the vehicle.
+3. In the **Device access** card, press **Create device key**.
+4. Copy the **server address** and the **device key**. The key is shown only once.
+5. Enter both on the app's settings screen. Trim spaces and line breaks from pasted values.
+
+If a key is lost or leaked, press **Regenerate key** or **Revoke key**. The old key stops working immediately.
+
+## Step 2: Test the connection
+
+Do this from a computer before writing any app code. Set your two values:
 
 ```bash
 export BASE="https://your-server.example.com/api"
 export KEY="dk_paste_the_key_here"
 ```
+
+Then run the commands.
 
 <!-- quicktest:start -->
 ```bash
@@ -53,152 +68,185 @@ curl -s -X POST "$BASE/device/heartbeat" -H "X-Device-Key: $KEY" -H "Content-Typ
 
 # 4. Report a crash. clientEventId is an id YOUR app makes up (a UUID)
 curl -s -X POST "$BASE/device/crash" -H "X-Device-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"clientEventId":"test-0001","status":"countdown","latitude":-15.7861,"longitude":35.0058}'
+  -d '{"clientEventId":"test-0001","status":"countdown","ref":"K7Q2","latitude":-15.7861,"longitude":35.0058}'
 
 # 5. Send the same report again (a retry). You get the original back with "duplicate": true
 curl -s -X POST "$BASE/device/crash" -H "X-Device-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"clientEventId":"test-0001","status":"countdown","latitude":-15.7861,"longitude":35.0058}'
+  -d '{"clientEventId":"test-0001","status":"countdown","ref":"K7Q2","latitude":-15.7861,"longitude":35.0058}'
 
 # 6. The countdown ended and the SMS went out. Update the report using your own id
 curl -s -X PATCH "$BASE/device/crash/test-0001" -H "X-Device-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"status":"alert_sent","notes":"SMS sent to 2 contacts"}'
+  -d '{"status":"alert_sent","deliveries":[{"role":"dispatcher","phoneNumber":"+265999000111","status":"delivered"}]}'
 
 # 7. A wrong key is refused
 curl -s -i "$BASE/device/me" -H "X-Device-Key: dk_wrong" | head -1
 ```
 <!-- quicktest:end -->
 
-Test reports show up in the dashboard like real ones. Ask an admin to set them to a status such as cancelled, or use a test vehicle.
+If command 2 returns your vehicle name, the connection works. Test reports appear in the dashboard and on the live board like real ones, so use a test vehicle and tell the dispatcher before testing.
 
-## 4. The rules every call follows
+## Step 3: Build the app behaviour
 
-- **HTTPS only.** Android blocks plain http by default, and the server redirects it.
-- **Header:** `X-Device-Key: dk_...` (or `Authorization: Device dk_...`) on every `/device/...` call. `/health` needs no key.
-- **Body:** JSON with `Content-Type: application/json`. Responses are always JSON.
-- **Times:** ISO 8601 in UTC, for example `2026-10-03T10:15:30.123Z`. In Kotlin, `Instant.now().toString()` gives this.
-- **Errors:** `{ "error": "readable message", "code": "machine_code" }`.
-- **Limits:** about 240 requests per 10 minutes per device. More than enough for normal use.
+### When a crash happens
 
-## 5. Endpoints
+1. The accident SMS arrives from the Arduino.
+2. Start the countdown immediately.
+3. Make two values and save them with the crash:
+   - `clientEventId`: a UUID. It stops retries from creating duplicate reports.
+   - `ref`: 4 to 6 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no 0, 1, I or O). It matches an SMS to its row on the live board.
+4. Queue `POST /device/crash` with `clientEventId`, `ref`, `detectedAt`, location and `"status": "countdown"`.
+5. Queue one update when the outcome is known:
 
-### GET /health
-No key. Returns `{ "status": "ok", "time": "..." }`. Use it to wake the server before important calls.
+| What happened | Send with `PATCH /device/crash/{clientEventId}` |
+| --- | --- |
+| User cancelled | `{"status":"cancelled","cancelledBy":"user"}` |
+| SMS sent | `{"status":"alert_sent","deliveries":[...]}` |
+| SMS failed | `{"status":"alert_failed","deliveries":[...]}` |
+
+If there is no GPS fix yet, create the report without a location and send `latitude` and `longitude` in a later update.
+
+### Who receives the SMS
+
+Each contact has a `role`. Fetch contacts with `GET /device/me` while online and save them on the phone, so they are available during a crash with no data.
+
+| Role | Message |
+| --- | --- |
+| `dispatcher` | Short and factual, with the `ref` and a directions link: `https://google.com/maps/dir//LAT,LNG` |
+| `next_of_kin` | Personal, with the `ref` and a map pin link |
+
+### Report SMS delivery
+
+Add `deliveries` to an update to show who was reached. Send another update when a result changes.
+
+```json
+{
+  "deliveries": [
+    { "role": "dispatcher",  "phoneNumber": "+265999000111", "status": "delivered" },
+    { "role": "next_of_kin", "phoneNumber": "+265888111222", "status": "failed" }
+  ]
+}
+```
+
+`status` is `pending`, `sent`, `delivered` or `failed`. Send at most 20 entries. A late `sent` does not replace `delivered`.
+
+### Offline queue
+
+Mobile data is unreliable, so put every crash call in a saved queue (for example a Room table).
+
+- Save the request first, then send it.
+- Keep it until the server answers with 200 or 201.
+- Keep the order for each crash: create first, then updates.
+- Retry after 30 s, 1 min, 2 min, 5 min, 10 min, then every 15 min.
+
+| Response | What to do |
+| --- | --- |
+| 200, 201 | Done. Remove it from the queue |
+| No network, timeout, 408, 5xx | Retry later |
+| 429 | Wait for the number of seconds in `Retry-After`, then retry |
+| 401 | Stop sending, keep the queue, show "Ask the admin for a new device key" |
+| 400, 404 | Do not retry. Log the `error` text and fix the bug |
+
+### Check in (heartbeat)
+
+- Call `POST /device/heartbeat` about once an hour with WorkManager, after the phone restarts and when the app opens.
+- Include `balanceText` only when you have a new balance reading.
+- After 12 hours of silence the dashboard shows "no recent check in".
+
+### Slow first request
+
+On free hosting the server sleeps when idle, and the first request can take about a minute. Use a 60 second timeout for the first call after the app starts, then 15 to 20 seconds.
+
+### Keep the key safe
+
+- Store it in `EncryptedSharedPreferences` or protect it with the Android Keystore.
+- Never write it to logs, crash reports or screenshots.
+- Never put a key in the source code.
+- Use `https://` only.
+
+## Step 4: Check your work
+
+- [ ] The app has no admin email or password field
+- [ ] The key is stored encrypted and never logged
+- [ ] The vehicle's **Last check in** updates in the dashboard every hour
+- [ ] With data off, the SMS still sends, and the report arrives when data returns
+- [ ] Sending the same report twice creates only one report
+- [ ] Cancelled, sent and failed each update the same report
+- [ ] The `ref` in the SMS matches the one on the live board
+- [ ] SMS delivery results appear on the live board
+- [ ] A revoked key shows a clear message and the app keeps running
+- [ ] The first request after a long quiet period succeeds
+
+## Endpoint reference
+
+All paths start from the server address, which already ends in `/api`. Send JSON with `Content-Type: application/json`. Times are ISO 8601 in UTC, for example `2026-10-03T10:15:30Z` (Kotlin: `Instant.now().toString()`). Errors look like `{"error":"readable message","code":"machine_code"}`. Each device may make about 240 requests every 10 minutes.
+
+| Request | Purpose |
+| --- | --- |
+| `GET /health` | Check the server is awake. No key needed |
+| `GET /device/me` | This vehicle and its contacts |
+| `POST /device/heartbeat` | Check in |
+| `POST /device/crash` | Create a crash report |
+| `PATCH /device/crash/{id}` | Update a report |
+| `GET /device/crash/{id}` | Read one report |
+| `GET /device/crashes?limit=20` | Recent reports, newest first, up to 50 |
+
+`{id}` is either your `clientEventId` or the server `id`. A device can only see its own vehicle's reports.
 
 ### GET /device/me
-Returns this vehicle and its contacts, ordered by priority:
+
 ```json
 {
   "vehicle": { "id": "...", "name": "Truck 1", "status": "active" },
-  "contacts": [ { "id": "...", "name": "Dad", "phoneNumber": "+265888333444", "priority": 1 } ],
+  "contacts": [
+    { "id": "...", "name": "Dad", "phoneNumber": "+265888333444", "priority": 1, "role": "next_of_kin" }
+  ],
   "settings": { "recommendedHeartbeatMinutes": 60, "staleAfterMinutes": 720 },
   "serverTime": "2026-10-03T10:15:30.123Z"
 }
 ```
-The app keeps its own contact list for sending SMS. Reading contacts here is optional.
 
 ### POST /device/heartbeat
-Tells the dashboard the device is alive. Body is optional.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `balanceText` | string, up to 500 chars | Raw USSD or carrier text. The server detects "low balance" itself. Leave it out when you have nothing new. A check in without it keeps the last known balance. |
+Send `{}` or `{"balanceText":"..."}`. `balanceText` is the raw carrier message, up to 500 characters. The server detects a low balance itself.
 
-Response: `{ "ok": true, "lowBalance": false, "serverTime": "..." }`
+Response: `{"ok":true,"lowBalance":false,"serverTime":"..."}`
 
-### POST /device/crash
-Creates a crash report. Returns **201** for a new report and **200** with `"duplicate": true` when the same `clientEventId` was already received.
+### Crash report fields
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `clientEventId` | string, 1 to 64 chars `A-Z a-z 0-9 . _ : -` | **Always send one** (a UUID). It makes retries safe. |
-| `status` | `detected`, `countdown`, `cancelled`, `alert_sent`, `alert_failed` | Defaults to `detected`. |
-| `latitude`, `longitude` | numbers (numeric strings are accepted) | Send both or neither. |
-| `detectedAt` | ISO 8601 time | When the crash happened. Used if it is within the last 30 days, otherwise server time is used. |
-| `notes` | string, up to 2000 chars | Optional. |
-| `cancelledBy` | string, up to 120 chars | For example `user`. |
+| Field | Create | Update | Rules |
+| --- | --- | --- | --- |
+| `clientEventId` | Yes | No | 1 to 64 characters: letters, digits `. _ : -`. Always send it |
+| `ref` | Yes | No | 4 to 6 characters, see Step 3. The server makes one if missing |
+| `status` | Yes | Yes | `detected` (default), `countdown`, `cancelled`, `alert_sent`, `alert_failed` |
+| `detectedAt` | Yes | No | Within the last 30 days, otherwise server time is used |
+| `latitude`, `longitude` | Yes | Yes | Numbers. Send both or neither |
+| `notes` | Yes | Yes | Up to 2000 characters |
+| `cancelledBy` | Yes | Yes | Up to 120 characters, for example `user` |
+| `deliveries` | No | Yes | See Report SMS delivery |
 
-Response:
+Creating returns **201**. Sending the same `clientEventId` again returns **200** with `"duplicate": true` and the report as it is now. It does not change the report.
+
 ```json
-{ "event": { "id": "...", "vehicleId": "...", "detectedAt": "...", "latitude": -15.7861, "longitude": 35.0058,
-             "status": "countdown", "cancelledBy": null, "notes": "" },
+{
+  "event": { "id": "...", "ref": "K7Q2", "status": "countdown", "latitude": -15.7861, "longitude": 35.0058 },
   "duplicate": false,
-  "warnings": [] }
-```
-A crash report is **never rejected over a bad optional field**. A bad location, time or notes value is dropped and explained in `warnings` (for example `"latitude ignored: must be a number between -90 and 90"`). Log warnings during development, they point to bugs in the app. A wrong `status`, `clientEventId` or request shape returns **400**.
-
-### PATCH /device/crash/{id}
-Updates one of this device's own reports. `{id}` can be the server `id` **or your own `clientEventId`**, so the update still works if the create response never arrived. Send only the fields you want to change: `status`, `cancelledBy`, `notes`, `latitude`, `longitude`. Response: `{ "event": {...}, "warnings": [] }`. A report that belongs to another vehicle returns **404**.
-
-### GET /device/crash/{id}
-Returns `{ "event": {...} }`, with the same id rules as PATCH.
-
-### GET /device/crashes?limit=20
-Returns `{ "events": [...] }`, newest first, up to 50.
-
-## 6. How the app should behave
-
-### Crash flow
-
-```
-ACCIDENT SMS arrives from the Arduino
-  |
-  |-- (1) start the countdown and the SMS flow exactly as today. Do not wait for the network.
-  |-- (2) make a UUID, save it with the crash locally, queue:  POST /device/crash {clientEventId, status:"countdown", GPS, detectedAt}
-  |
-  +-- user cancels      -> queue: PATCH /device/crash/{clientEventId} {status:"cancelled", cancelledBy:"user"}
-  +-- SMS sent          -> queue: PATCH /device/crash/{clientEventId} {status:"alert_sent"}
-  +-- SMS failed        -> queue: PATCH /device/crash/{clientEventId} {status:"alert_failed"}
+  "warnings": []
+}
 ```
 
-If GPS is not ready at step 2, send the report without a location and PATCH `latitude` and `longitude` when you get them.
+The response is shortened here. An update returns `event` and `warnings`.
 
-### Offline queue and retries
+A wrong `status`, `clientEventId`, `cancelledBy` or request shape returns **400**. A bad location, time, `ref`, `notes` or delivery entry does not: the report is saved and the problem is listed in `warnings`. Log warnings while developing.
 
-Mobile data in the field is unreliable, so every call goes through a small persistent queue (a Room table, for example):
+## Kotlin example
 
-- Save the request first, then try to send it. Keep it until you get a **2xx** response.
-- Send requests for the same crash **in order**: create, then updates.
-- Retry with growing waits: 30 s, 1 min, 2 min, 5 min, 10 min, then every 15 min.
-- Because of `clientEventId`, sending the same create twice is harmless.
-
-What to do with each response:
-
-| Response | Meaning | Action |
-| --- | --- | --- |
-| 200, 201 | Done | Remove from the queue |
-| 408, 5xx, timeout, no network | Temporary | Retry later |
-| 429 | Too many requests | Wait for the `Retry-After` seconds, then retry |
-| 401 `invalid_device_key` | Key wrong, revoked or regenerated | Stop sending, show "Ask the admin for a new device key", keep the queue |
-| 400 `invalid_request` | The app sent something invalid | Do not retry. Log the `error` text. It is a bug to fix |
-| 404 `not_found` | Unknown report for this vehicle | Do not retry |
-
-### Heartbeat
-
-- Send one about every hour with Android WorkManager (`PeriodicWorkRequest`, minimum interval 15 minutes), and once after boot and when the app opens.
-- Include `balanceText` only when you actually read a new balance.
-- The dashboard marks a vehicle "no recent check in" after 12 hours of silence, so hourly leaves plenty of margin.
-
-### Slow first request
-
-The server may be asleep (free hosting). The first call after a quiet period can take up to about a minute. Use a long timeout (60 s) for the first call after the app starts, call `GET /health` first if you like, then use normal timeouts (15 to 20 s). Because crash calls are queued and retried, a slow server never loses a report.
-
-## 7. Security rules for the app
-
-- Store the device key in `EncryptedSharedPreferences` or the Android Keystore, not in plain preferences.
-- Never write the key to logs, crash reports or screenshots.
-- Never hard-code a key in the source. Each vehicle has its own, entered at setup.
-- Use HTTPS only. Do not turn on cleartext traffic.
-- No admin fields anywhere in the app.
-- The server stores only a fingerprint of each key, so a lost key cannot be looked up. An admin creates a new one.
-
-## 8. Kotlin example (OkHttp)
-
-Illustrative, not compiled against your project. Adjust names and error handling to your code.
+This uses OkHttp. It has not been compiled against your project, so adjust it to fit.
 
 ```kotlin
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.time.Instant
@@ -248,63 +296,54 @@ class DeviceApi(private val baseUrl: String, private val deviceKey: () -> String
     fun heartbeat(balanceText: String? = null) =
         send("POST", "/device/heartbeat", JSONObject().apply { balanceText?.let { put("balanceText", it) } })
 
-    fun reportCrash(clientEventId: String, lat: Double?, lon: Double?, detectedAt: Instant, status: String = "countdown") =
+    fun reportCrash(clientEventId: String, lat: Double?, lon: Double?, detectedAt: Instant, ref: String, status: String = "countdown") =
         send("POST", "/device/crash", JSONObject()
             .put("clientEventId", clientEventId)
             .put("detectedAt", detectedAt.toString())
             .put("status", status)
+            .put("ref", ref)
             .apply { if (lat != null && lon != null) { put("latitude", lat); put("longitude", lon) } })
 
-    fun updateCrash(clientEventId: String, status: String, cancelledBy: String? = null) =
+    fun updateCrash(clientEventId: String, status: String, cancelledBy: String? = null, deliveries: JSONArray? = null) =
         send("PATCH", "/device/crash/$clientEventId", JSONObject()
             .put("status", status)
-            .apply { cancelledBy?.let { put("cancelledBy", it) } })
+            .apply {
+                cancelledBy?.let { put("cancelledBy", it) }
+                deliveries?.let { put("deliveries", it) }
+            })
 }
 ```
 
-Usage: make `val id = UUID.randomUUID().toString()` when the ACCIDENT SMS arrives, store it with the crash, call `reportCrash(id, ...)` from your queue worker, then `updateCrash(id, "cancelled", "user")` or `updateCrash(id, "alert_sent")` as the flow finishes. Keep each queued item until `send` returns `Outcome.Done`.
+Call `reportCrash(...)` and `updateCrash(...)` from your queue worker, and keep each item queued until the result is `Outcome.Done`.
 
-## 9. Moving from the old admin approach
+## Moving from admin login
 
-| Old (admin login) | New (device key) |
+Admin logins fail in the app because they expire after 12 hours, force a password change on first use and are rate limited. Replace each old call:
+
+| Old | New |
 | --- | --- |
-| `POST /api/auth/login` and storing a token | Removed. Send `X-Device-Key` instead |
-| `POST /api/events` with `vehicleId` | `POST /api/device/crash` (no `vehicleId`, add `clientEventId`) |
+| `POST /api/auth/login` and a stored token | Remove. Send `X-Device-Key` |
+| `POST /api/events` with `vehicleId` | `POST /api/device/crash` with `clientEventId` |
 | `PUT /api/events/{id}` | `PATCH /api/device/crash/{id}` |
-| `POST /api/sim/{vehicleId}/heartbeat` | `POST /api/device/heartbeat` (no `vehicleId`) |
+| `POST /api/sim/{vehicleId}/heartbeat` | `POST /api/device/heartbeat` |
 | `GET /api/vehicles/{id}/contacts` | `GET /api/device/me` |
-| Admin email and password fields | Deleted. One "Device key" field and one "Server address" field |
 
-The old admin calls still exist for the dashboard, but the app should not use them.
+## Troubleshooting
 
-## 10. If it will not connect
+| What you see | What to do |
+| --- | --- |
+| First call times out, later calls work | The server was asleep. Use a 60 second timeout for the first call |
+| `401 invalid_device_key` | Copy the key again and trim it. Check the header is `X-Device-Key`. The key may have been regenerated or revoked |
+| `403 password_change_required`, or `401` after about 12 hours | The app is still using an admin login. Use a device key |
+| `404 Route not found` | Check the address ends in `/api` and the path starts with `/device/` |
+| `429` | Wait for `Retry-After` seconds. Check the app is not looping |
+| `CLEARTEXT communication not permitted` | Change `http://` to `https://` |
+| `400 invalid_request` | Read the `error` text. It names the problem |
+| `warnings` is not empty | The report was saved, but fix the field listed |
+| Certificate errors | Check the phone's date and time, then open the address in its browser |
 
-| What you see | Likely cause | What to do |
-| --- | --- | --- |
-| First call hangs or times out, later calls work | Server was asleep | Wait up to a minute, call `/health` first, use a 60 s first timeout |
-| `401` with code `invalid_device_key` | Typo, extra space, wrong vehicle, or the key was regenerated or revoked | Copy the key again, trim it, check the header name is exactly `X-Device-Key`, ask the admin for a new key |
-| `403` with code `password_change_required` | You are still using an admin login | Stop using admin logins. Use a device key |
-| `401` after about 12 hours on an admin login | Admin tokens expire | Same: use a device key, which does not expire |
-| `404 Route not found` | The server address is missing `/api`, or the path is wrong | The base must end in `/api`. Paths start with `/device/...` |
-| `429` | Too many requests or too many wrong keys | Wait for `Retry-After` seconds. Check the app is not looping |
-| `CLEARTEXT communication not permitted` | The address starts with `http://` | Use `https://` |
-| `400 invalid_request` | The app sent something invalid | Read the `error` text, it names the problem |
-| `200` or `201` but `warnings` is not empty | An optional field was dropped | Fix the field. The report was still saved |
-| TLS or certificate errors | Phone date and time are wrong, or an old Android version | Fix the clock. Check the HTTPS address in a browser |
+## Getting help
 
-## 11. Acceptance checklist
+Send the backend owner the vehicle name, time and time zone, request path, HTTP status, and the `error` and `code` values. **Never send the device key.**
 
-- [ ] No admin email or password field exists anywhere in the app
-- [ ] The key is stored encrypted and never logged
-- [ ] Heartbeat arrives hourly and appears as "last check in" in the dashboard
-- [ ] A crash with data off still sends the SMS, then the report reaches the dashboard once data returns
-- [ ] Pulling the network in the middle of a crash and sending the same report twice creates one report
-- [ ] Cancel, alert sent and alert failed each update the same report
-- [ ] A revoked key produces a clear message in the app, not a crash
-- [ ] The first request after a quiet period succeeds despite a slow server
-
-## 12. Asking for help
-
-When you report a problem to the backend owner, send: the vehicle name, the time with time zone, the endpoint, the HTTP status and the `error` and `code` text. **Never send the device key itself.**
-
-A machine readable version of this API is in `docs/openapi-device.yaml`. It can be imported into Postman or used to generate a client.
+For Postman or client generation there is [openapi-device.yaml](openapi-device.yaml). It does not yet list `ref`, `deliveries` or contact `role`, so use this guide for those.
